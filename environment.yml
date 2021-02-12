@@ -1,0 +1,22 @@
+name: hoffrl
+channels:
+  - conda-forge
+  - defaults
+  - pytorch
+dependencies:
+  - python=3.8
+  - pip
+  - pandas
+  - numpy
+  - scipy
+  - scikit-learn
+  - tqdm
+  - matplotlib
+  - seaborn
+  - pytorch=1.7
+  - torchvision
+  - torchaudio
+  - cudatoolkit=10.1
+  - jupyter
+  - pip:
+      -gym
