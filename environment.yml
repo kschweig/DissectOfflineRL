@@ -1,8 +1,8 @@
 name: hoffrl
 channels:
+  - pytorch
   - conda-forge
   - defaults
-  - pytorch
 dependencies:
   - python=3.8
   - pip
@@ -19,4 +19,4 @@ dependencies:
   - cudatoolkit=10.1
   - jupyter
   - pip:
-      -gym
+      - gym

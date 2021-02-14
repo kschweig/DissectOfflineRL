@@ -1,5 +1,6 @@
 import os
 import gym
+import torch
 import pickle
 import numpy as np
 from tqdm import tqdm
@@ -15,6 +16,8 @@ transitions = buffer_size
 show_every = 2000
 train_every = 1
 train_start_iter = batch_size
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(device)
 
 env = gym.make('CartPole-v1')
 obs_space = len(env.observation_space.high)
@@ -73,9 +76,25 @@ for iter in tqdm(range(transitions)):
 with open(os.path.join("data", "buffer.pkl"), "wb") as f:
     pickle.dump(buffer, f)
 
+# showcase policy
+state, done = env.reset(), False
+while not done and iter < 500:
+    env.render()
+    action, _ = agent.policy(state)
+    state, _, done, _ = env.step(action)
+env.close()
 
+# mean rewards
+mean_rewards = []
+for i in range(len(all_rewards)):
+    from_ = max(0, i-100)
+    mean_rewards.append(np.mean(all_rewards[from_:i]))
+
+# plot learning
 plt.figure(figsize=(8, 6))
 plt.ylabel("Reward")
 plt.xlabel("Episodes")
-plt.plot(range(len(all_rewards)), all_rewards)
+plt.plot(range(len(all_rewards)), all_rewards, label="reward")
+plt.plot(range(len(mean_rewards)), mean_rewards, label="mean reward")
+plt.legend()
 plt.show()

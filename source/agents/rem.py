@@ -20,7 +20,7 @@ class REM(Agent):
         self.end_eps = 1e-2
         self.eps_decay_period = 1000
         self.slope = (self.end_eps - self.initial_eps) / self.eps_decay_period
-        self.eval_eps = 1e-3
+        self.eval_eps = 0
 
         # discounting factor gamma
         self.discount = 0.95
