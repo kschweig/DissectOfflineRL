@@ -6,13 +6,14 @@ import torch.nn as nn
 from source.agents.agent import Agent
 
 
-class DQN(Agent):
+class REM(Agent):
 
     def __init__(self,
                  obs_space,
                  action_space,
+                 heads=200,
                  seed=None):
-        super(DQN, self).__init__(obs_space, action_space, seed)
+        super(REM, self).__init__(obs_space, action_space, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
@@ -34,7 +35,7 @@ class DQN(Agent):
         self.target_update_freq = 8000
 
         # Q-Networks
-        self.Q = Network(self.obs_space, self.action_space).to(self.device)
+        self.Q = Network(self.obs_space, self.action_space, heads=heads).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
 
         # Optimization
@@ -82,7 +83,7 @@ class DQN(Agent):
             self.Q_target.load_state_dict(self.Q.state_dict())
 
     def get_name(self) -> str:
-        return "DQN"
+        return "REM"
 
     def determinancy(self):
         return round((1-max(self.slope * self.iterations + self.initial_eps, self.end_eps))*100, 2)
@@ -100,15 +101,19 @@ class DQN(Agent):
 
 class Network(nn.Module):
 
-    def __init__(self, num_state, num_actions):
+    def __init__(self, num_state, num_actions, heads):
         super(Network, self).__init__()
+
+        self.rng = np.random.default_rng(seed=num_state)
+        self.heads = heads
+        self.num_actions = num_actions
 
         self.fnn = nn.Sequential(
             nn.Linear(in_features=num_state, out_features=128),
             nn.SELU(),
             nn.Linear(in_features=128, out_features=128),
             nn.SELU(),
-            nn.Linear(in_features=128, out_features=num_actions)
+            nn.Linear(in_features=128, out_features=num_actions*heads)
         )
 
     def forward(self, state):
@@ -118,10 +123,24 @@ class Network(nn.Module):
         # normalize
         #state = normalize(state)
 
-        return self.fnn(state)
+        alphas = self.rng.normal(size=self.heads)
+        alphas /= np.sum(alphas)
+        alphas = torch.FloatTensor(alphas).to(state.device)
+
+        return torch.sum(self.fnn(state).reshape(len(state), self.num_actions, self.heads) * alphas.reshape(1, 1,-1), dim=2)
 
     def evaluate(self, state):
-        return self.forward(state)
+        if len(state.shape) == 1:
+            state = state.unsqueeze(dim=0)
+
+        # normalize
+        #state = normalize(state)
+
+        return torch.mean(self.fnn(state).reshape(len(state), self.num_actions, self.heads), dim=2)
+
+
+
+
 
 
 """

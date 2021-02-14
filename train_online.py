@@ -9,10 +9,10 @@ from source.buffer import ReplayBuffer
 from source.agents.dqn import DQN
 
 seed = 42
-batch_size = 20
+batch_size = 32
 buffer_size = 100000
 transitions = buffer_size
-show_every = 500
+show_every = 2000
 train_every = 1
 train_start_iter = batch_size
 
@@ -58,14 +58,14 @@ for iter in tqdm(range(transitions)):
         agent.train(buffer)
 
     if (iter+1) % show_every == 0:
+        all_rewards.extend(rewards)
         print(f"reward: "
-              f"(mean) {round(np.mean(rewards), 2)} , "
-              f"(min) {np.min(rewards)} , "
-              f"(max) {np.max(rewards)} | "
+              f"(mean) {round(np.mean(all_rewards[-100:]), 2)} , "
+              f"(min) {np.min(all_rewards[-100:])} , "
+              f"(max) {np.max(all_rewards[-100:])} | "
               f"value {round(np.nanmean(values), 2)} | "
               f"episode {ep}"
         )
-        all_rewards.extend(rewards)
         rewards = []
         values = []
 

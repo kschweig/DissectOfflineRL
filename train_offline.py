@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 
 from source.buffer import ReplayBuffer
 from source.agents.dqn import DQN
+from source.agents.rem import REM
 
 seed = 42
-batch_size = 20
+batch_size = 32
 buffer_size = 100000
 transitions = buffer_size
 show_every = 2000
