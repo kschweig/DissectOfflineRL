@@ -25,13 +25,13 @@ class DQN(Agent):
         self.discount = 0.95
 
         # loss function
-        self.huber = nn.SmoothL1Loss()
+        self.huber = nn.MSELoss()
 
         # Number of training iterations
         self.iterations = 0
 
         # After how many training steps 'snap' target to main network?
-        self.target_update_freq = 8000
+        self.target_update_freq = 1
 
         # Q-Networks
         self.Q = Network(self.obs_space, self.action_space).to(self.device)
@@ -104,11 +104,13 @@ class Network(nn.Module):
         super(Network, self).__init__()
 
         self.fnn = nn.Sequential(
-            nn.Linear(in_features=num_state, out_features=128),
+            nn.Linear(in_features=num_state, out_features=12),
             nn.SELU(),
-            nn.Linear(in_features=128, out_features=128),
+            nn.Linear(in_features=12, out_features=12),
             nn.SELU(),
-            nn.Linear(in_features=128, out_features=num_actions)
+            nn.Linear(in_features=12, out_features=12),
+            nn.SELU(),
+            nn.Linear(in_features=12, out_features=num_actions)
         )
 
     def forward(self, state):

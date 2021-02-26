@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from source.buffer import ReplayBuffer
 from source.agents.dqn import DQN
 from source.agents.rem import REM
+from source.agents.hqn import HQN
 
 seed = 42
 batch_size = 20
@@ -19,7 +20,7 @@ train_start_iter = batch_size
 
 env = gym.make('CartPole-v1')
 obs_space = len(env.observation_space.high)
-agent = REM(obs_space, env.action_space.n, seed=seed)
+agent = DQN(obs_space, env.action_space.n, seed=seed)
 buffer = ReplayBuffer(obs_space, buffer_size, batch_size, seed=seed)
 # load saved buffer
 with open(os.path.join("data", "buffer.pkl"), "rb") as f:
@@ -40,7 +41,7 @@ for iter in tqdm(range(transitions)):
         while not done:
             action, value = agent.policy(state, eval=True)
             state, reward, done, _ = env.step(action)
-            #state = buffer.get_closest(state)
+            state = buffer.get_closest(state)
             ep_reward += reward
             values.append(value)
 

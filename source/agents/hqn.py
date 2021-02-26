@@ -4,23 +4,23 @@ import copy
 import torch
 import torch.nn as nn
 from source.agents.agent import Agent
+from hopfield import HopfieldLayer
 
 
-class REM(Agent):
+class HQN(Agent):
 
     def __init__(self,
                  obs_space,
                  action_space,
-                 heads=200,
                  seed=None):
-        super(REM, self).__init__(obs_space, action_space, seed)
+        super(HQN, self).__init__(obs_space, action_space, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
         self.end_eps = 1e-2
         self.eps_decay_period = 1000
         self.slope = (self.end_eps - self.initial_eps) / self.eps_decay_period
-        self.eval_eps = 0
+        self.eval_eps = 0.
 
         # discounting factor gamma
         self.discount = 0.95
@@ -35,8 +35,8 @@ class REM(Agent):
         self.target_update_freq = 1
 
         # Q-Networks
-        self.Q = Network(self.obs_space, self.action_space, heads=heads).to(self.device)
-        self.Q_target = copy.deepcopy(self.Q)
+        self.Q = Network(self.obs_space, self.action_space).to(self.device)
+        self.Q_target = self.Q#copy.deepcopy(self.Q)
 
         # Optimization
         self.lr = 0.001
@@ -80,10 +80,10 @@ class REM(Agent):
         self.iterations += 1
         # Update target network by full copy every X iterations.
         if self.iterations % self.target_update_freq == 0:
-            self.Q_target.load_state_dict(self.Q.state_dict())
+            pass#self.Q_target.load_state_dict(self.Q.state_dict())
 
     def get_name(self) -> str:
-        return "REM"
+        return "HQN"
 
     def determinancy(self):
         return round((1-max(self.slope * self.iterations + self.initial_eps, self.end_eps))*100, 2)
@@ -101,46 +101,41 @@ class REM(Agent):
 
 class Network(nn.Module):
 
-    def __init__(self, num_state, num_actions, heads):
+    def __init__(self, num_state, num_actions):
         super(Network, self).__init__()
 
-        self.rng = np.random.default_rng(seed=num_state)
-        self.heads = heads
-        self.num_actions = num_actions
+        hidden = 12
 
-        self.fnn = nn.Sequential(
-            nn.Linear(in_features=num_state, out_features=128),
-            nn.SELU(),
-            nn.Linear(in_features=128, out_features=128),
-            nn.SELU(),
-            nn.Linear(in_features=128, out_features=num_actions*heads)
-        )
+        self.fc1 = nn.Linear(in_features=num_state, out_features=hidden)
+        self.fc2 = nn.Linear(in_features=hidden, out_features=num_actions)
+        self.relu = nn.SELU()
+
+        self.hopfield_layer = HopfieldLayer(input_size=hidden,
+                                       quantity=10000,
+                                       scaling=8.25,
+                                       stored_pattern_as_static=True,
+                                       state_pattern_as_static=True
+                                       )
 
     def forward(self, state):
         if len(state.shape) == 1:
             state = state.unsqueeze(dim=0)
 
+        if len(state.shape) == 2:
+            state = state.unsqueeze(dim=1)
+
         # normalize
         #state = normalize(state)
 
-        alphas = self.rng.normal(size=self.heads)
-        alphas /= np.sum(alphas)
-        alphas = torch.FloatTensor(alphas).to(state.device)
+        batch_size = len(state)
 
-        return torch.sum(self.fnn(state).reshape(len(state), self.num_actions, self.heads) * alphas.reshape(1, 1,-1), dim=2)
+        state = self.relu(self.fc1(state))
+        state = self.relu(self.hopfield_layer(state.view(batch_size, 1, -1)))
+
+        return self.fc2(state.view(batch_size, -1))
 
     def evaluate(self, state):
-        if len(state.shape) == 1:
-            state = state.unsqueeze(dim=0)
-
-        # normalize
-        #state = normalize(state)
-
-        return torch.mean(self.fnn(state).reshape(len(state), self.num_actions, self.heads), dim=2)
-
-
-
-
+        return self.forward(state)
 
 
 """

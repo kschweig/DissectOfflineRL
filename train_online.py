@@ -11,8 +11,8 @@ from source.agents.dqn import DQN
 
 seed = 42
 batch_size = 32
-buffer_size = 100000
-transitions = buffer_size
+buffer_size = 50000
+transitions = 100000
 show_every = 2000
 train_every = 1
 train_start_iter = batch_size
