@@ -22,6 +22,7 @@ class ReplayBuffer():
         self.not_done = np.zeros((self.buffer_size, 1))
 
         self.norm = np.ones((self.buffer_size))
+        self.probas = np.ones((self.buffer_size)) / self.buffer_size
 
     def add(self, state, action, reward, done, next_state):
 
@@ -34,8 +35,13 @@ class ReplayBuffer():
         self.idx = (self.idx + 1) % self.buffer_size
         self.current_size = min(self.current_size + 1, self.buffer_size)
 
-    def sample(self):
-        ind = self.rng.integers(0, self.current_size, size=self.batch_size)
+    def sample(self, minimum=None, maximum=None):
+        if minimum == None and maximum==None:
+            ind = np.arange(0, self.current_size)
+            ind = self.rng.choice(ind, size=self.batch_size, replace=False)
+        else:
+            ind = np.arange(minimum, maximum)
+            ind = self.rng.choice(ind, size=self.batch_size, replace=False, p=self.probas)
 
         return (torch.FloatTensor(self.state[ind]).to(self.device),
                 torch.LongTensor(self.action[ind]).to(self.device),
@@ -46,6 +52,14 @@ class ReplayBuffer():
 
     def cosine_similarity(self, s1, s2, n2):
         return np.sum(s1*s2) / np.linalg.norm(s1) / n2
+
+    def calc_probas(self):
+        self.probas = np.empty((self.buffer_size, self.buffer_size))
+        for i in range(self.buffer_size):
+            self.probas[i] = (self.state @ self.state[i].reshape(-1, 1) / self.norm / self.norm[i]).flatten()
+        self.probas = np.mean(self.probas, axis=1)
+        self.probas -= (np.min(self.probas))
+        self.probas /= np.sum(self.probas)
 
     def calc_sim(self):
         self.norm = np.linalg.norm(self.state, axis=1).reshape(-1,1)

@@ -1,6 +1,7 @@
 import os
 import gym
 import pickle
+import torch
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -11,10 +12,10 @@ from source.agents.rem import REM
 from source.agents.hqn import HQN
 
 seed = 42
-batch_size = 20
-buffer_size = 100000
-transitions = 2*buffer_size
-show_every = 200
+batch_size = 256
+buffer_size = 20000
+transitions = 20000
+show_every = 5
 train_every = 1
 train_start_iter = batch_size
 
@@ -26,14 +27,23 @@ buffer = ReplayBuffer(obs_space, buffer_size, batch_size, seed=seed)
 with open(os.path.join("data", "buffer.pkl"), "rb") as f:
     buffer = pickle.load(f)
     buffer.calc_sim()
+    buffer.calc_probas()
+
+# seeding
+env.seed(seed)
+torch.manual_seed(seed)
 
 all_rewards = []
 ep_reward = 0
 values = []
 
 for iter in tqdm(range(transitions)):
+    #minimum = max(0, iter - buffer_size)
+    #maximum = max(batch_size, iter)
+    minimum = 0
+    maximum = 20000
 
-    agent.train(buffer)
+    agent.train(buffer, minimum, maximum)
 
     if (iter+1) % show_every == 0:
         done = False
@@ -41,7 +51,7 @@ for iter in tqdm(range(transitions)):
         while not done:
             action, value = agent.policy(state, eval=True)
             state, reward, done, _ = env.step(action)
-            state = buffer.get_closest(state)
+            #state = buffer.get_closest(state)
             ep_reward += reward
             values.append(value)
 

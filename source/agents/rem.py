@@ -11,7 +11,7 @@ class REM(Agent):
     def __init__(self,
                  obs_space,
                  action_space,
-                 heads=200,
+                 heads=20,
                  seed=None):
         super(REM, self).__init__(obs_space, action_space, seed)
 
@@ -58,9 +58,9 @@ class REM(Agent):
         else:
             return self.rng.integers(self.action_space), np.nan
 
-    def train(self, buffer):
+    def train(self, buffer, minimum=None, maximum=None):
         # Sample replay buffer
-        state, action, next_state, reward, not_done = buffer.sample()
+        state, action, next_state, reward, not_done = buffer.sample(minimum, maximum)
 
         # Compute the target Q value
         with torch.no_grad():
@@ -109,11 +109,13 @@ class Network(nn.Module):
         self.num_actions = num_actions
 
         self.fnn = nn.Sequential(
-            nn.Linear(in_features=num_state, out_features=128),
+            nn.Linear(in_features=num_state, out_features=12),
             nn.SELU(),
-            nn.Linear(in_features=128, out_features=128),
+            nn.Linear(in_features=12, out_features=12),
             nn.SELU(),
-            nn.Linear(in_features=128, out_features=num_actions*heads)
+            nn.Linear(in_features=12, out_features=12),
+            nn.SELU(),
+            nn.Linear(in_features=12, out_features=num_actions*heads)
         )
 
     def forward(self, state):

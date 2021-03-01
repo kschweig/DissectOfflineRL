@@ -57,9 +57,9 @@ class DQN(Agent):
         else:
             return self.rng.integers(self.action_space), np.nan
 
-    def train(self, buffer):
+    def train(self, buffer, minimum=None, maximum=None):
         # Sample replay buffer
-        state, action, next_state, reward, not_done = buffer.sample()
+        state, action, next_state, reward, not_done = buffer.sample(minimum, maximum)
 
         # Compute the target Q value
         with torch.no_grad():

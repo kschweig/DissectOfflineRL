@@ -11,18 +11,25 @@ from source.agents.dqn import DQN
 
 seed = 42
 batch_size = 32
-buffer_size = 50000
-transitions = 100000
-show_every = 2000
+buffer_size = 20000
+transitions = 20000
+show_every = 5
 train_every = 1
 train_start_iter = batch_size
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
 env = gym.make('CartPole-v1')
+eval_env = gym.make('CartPole-v1')
 obs_space = len(env.observation_space.high)
 agent = DQN(obs_space, env.action_space.n, seed=seed)
 buffer = ReplayBuffer(obs_space, buffer_size, batch_size, seed=seed)
+savebuffer = ReplayBuffer(obs_space, transitions, batch_size, seed=seed)
+
+# seeding
+env.seed(seed)
+eval_env.seed(seed)
+torch.manual_seed(seed)
 
 all_rewards = []
 rewards = []
@@ -50,6 +57,7 @@ for iter in tqdm(range(transitions)):
 
     # add to buffer
     buffer.add(state, action, reward, done, next_state)
+    savebuffer.add(state, action, reward, done, next_state)
 
     ep_reward += reward
 
@@ -61,20 +69,25 @@ for iter in tqdm(range(transitions)):
         agent.train(buffer)
 
     if (iter+1) % show_every == 0:
-        all_rewards.extend(rewards)
-        print(f"reward: "
-              f"(mean) {round(np.mean(all_rewards[-100:]), 2)} , "
-              f"(min) {np.min(all_rewards[-100:])} , "
-              f"(max) {np.max(all_rewards[-100:])} | "
-              f"value {round(np.nanmean(values), 2)} | "
-              f"episode {ep}"
-        )
-        rewards = []
+        done_ = False
+        state_ = eval_env.reset()
+        while not done_:
+            action_, value_ = agent.policy(state_, eval=True)
+            state_, reward_, done_, _ = eval_env.step(action_)
+            # state = buffer.get_closest(state)
+            ep_reward += reward_
+            values.append(value_)
+
+        all_rewards.append(ep_reward)
+        print(f"cur_reward: ", ep_reward, "| mean reward: ", round(np.mean(all_rewards[-100:]), 2),
+              " | values: ", round(np.nanmean(values), 2))
+
+        ep_reward = 0
         values = []
 
 # save buffer for offline training
 with open(os.path.join("data", "buffer.pkl"), "wb") as f:
-    pickle.dump(buffer, f)
+    pickle.dump(savebuffer, f)
 
 # showcase policy
 state, done = env.reset(), False
