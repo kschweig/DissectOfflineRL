@@ -1,4 +1,4 @@
-name: hoffrl
+name: doffrl
 channels:
   - pytorch
   - conda-forge
