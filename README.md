@@ -1,2 +1,3 @@
-# HopfieldOfflineRL
-Utilizing modern Hopfield networks to succeed in Offline Reinforcement Learning
+# DissectOfflineRL
+
+Dissect Offline Reinforcement Learning, what do we need wrt. datasets and buffer strategies to succeed in this setting.
