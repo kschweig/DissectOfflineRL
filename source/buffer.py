@@ -59,6 +59,7 @@ class ReplayBuffer():
             self.probas[i] = (self.state @ self.state[i].reshape(-1, 1) / self.norm / self.norm[i]).flatten()
         self.probas = np.mean(self.probas, axis=1)
         self.probas -= (np.min(self.probas))
+        self.probas = 1/(self.probas + 9e-9)
         self.probas /= np.sum(self.probas)
 
     def calc_sim(self):

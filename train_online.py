@@ -11,9 +11,9 @@ from source.agents.dqn import DQN
 
 seed = 42
 batch_size = 32
-buffer_size = 20000
-transitions = 20000
-show_every = 5
+buffer_size = 50000
+transitions = 50000
+show_every = 50
 train_every = 1
 train_start_iter = batch_size
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -70,16 +70,17 @@ for iter in tqdm(range(transitions)):
 
     if (iter+1) % show_every == 0:
         done_ = False
+        ep_reward_ = 0
         state_ = eval_env.reset()
         while not done_:
             action_, value_ = agent.policy(state_, eval=True)
             state_, reward_, done_, _ = eval_env.step(action_)
             # state = buffer.get_closest(state)
-            ep_reward += reward_
+            ep_reward_ += reward_
             values.append(value_)
 
-        all_rewards.append(ep_reward)
-        print(f"cur_reward: ", ep_reward, "| mean reward: ", round(np.mean(all_rewards[-100:]), 2),
+        all_rewards.append(ep_reward_)
+        print(f"cur_reward: ", ep_reward_, "| mean reward: ", round(np.mean(all_rewards[-100:]), 2),
               " | values: ", round(np.nanmean(values), 2))
 
         ep_reward = 0

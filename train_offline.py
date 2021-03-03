@@ -12,9 +12,9 @@ from source.agents.rem import REM
 from source.agents.hqn import HQN
 
 seed = 42
-batch_size = 256
-buffer_size = 20000
-transitions = 20000
+batch_size = 32
+buffer_size = 50000
+transitions = 50000
 show_every = 5
 train_every = 1
 train_start_iter = batch_size
@@ -41,7 +41,7 @@ for iter in tqdm(range(transitions)):
     #minimum = max(0, iter - buffer_size)
     #maximum = max(batch_size, iter)
     minimum = 0
-    maximum = 20000
+    maximum = 50000
 
     agent.train(buffer, minimum, maximum)
 
@@ -51,7 +51,6 @@ for iter in tqdm(range(transitions)):
         while not done:
             action, value = agent.policy(state, eval=True)
             state, reward, done, _ = env.step(action)
-            #state = buffer.get_closest(state)
             ep_reward += reward
             values.append(value)
 
