@@ -20,3 +20,4 @@ dependencies:
   - jupyter
   - pip:
       - gym
+      - tensorboard

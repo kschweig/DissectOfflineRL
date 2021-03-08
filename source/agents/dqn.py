@@ -3,6 +3,7 @@ import os
 import copy
 import torch
 import torch.nn as nn
+from source.evaluation import entropy
 from source.agents.agent import Agent
 
 
@@ -52,14 +53,18 @@ class DQN(Agent):
         if self.rng.uniform(0, 1) > eps:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
-                q_val = self.Q.evaluate(state).cpu().numpy().flatten()
-                return q_val.argmax(), q_val.max()
+                q_val = self.Q.evaluate(state).cpu()
+                return q_val.argmax().item(), q_val.max().item(), entropy(q_val)
         else:
-            return self.rng.integers(self.action_space), np.nan
+            return self.rng.integers(self.action_space), np.nan, np.nan
 
-    def train(self, buffer, minimum=None, maximum=None):
+    def train(self, buffer, writer, minimum=None, maximum=None, use_probas=False):
         # Sample replay buffer
-        state, action, next_state, reward, not_done = buffer.sample(minimum, maximum)
+        state, action, next_state, reward, not_done = buffer.sample(minimum, maximum, use_probas)
+
+        # log state distribution
+        if self.iterations % 1000 == 0:
+            writer.add_histogram("train/states", state, self.iterations)
 
         # Compute the target Q value
         with torch.no_grad():
@@ -70,6 +75,9 @@ class DQN(Agent):
 
         # Compute Q loss (Huber loss)
         Q_loss = self.huber(current_Q, target_Q)
+
+        # log temporal difference error
+        writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q
         self.optimizer.zero_grad()
@@ -124,45 +132,3 @@ class Network(nn.Module):
 
     def evaluate(self, state):
         return self.forward(state)
-
-
-"""
-
-class Network(nn.Module):
-
-    def __init__(self, num_state, num_actions, duelling=False):
-        super(Network, self).__init__()
-
-        self.duelling = duelling
-
-        self.shared_stream = nn.Sequential(
-            nn.Linear(in_features=num_state, out_features=2*num_state),
-            nn.SELU(),
-            nn.Linear(in_features=2*num_state, out_features=num_state),
-            nn.SELU(),
-        )
-
-        self.advantage_stream = nn.Linear(in_features=num_state, out_features=num_actions)
-        self.value_stream = nn.Linear(in_features=num_state, out_features=1)
-
-    def forward(self, state):
-        if len(state.shape) == 1:
-            state = state.unsqueeze(dim=0)
-
-        # normalize
-        state = normalize(state)
-
-        features = self.shared_stream(state)
-
-        # if duelling, calculate value and advantage
-        if self.duelling:
-            value = self.value_stream(features)
-            advantages = self.advantage_stream(features)
-
-            return value + (advantages - advantages.mean())
-
-        # if not, simple calculate values via advantage stream
-        else:
-            return self.advantage_stream(features)
-            
-"""

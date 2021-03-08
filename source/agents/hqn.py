@@ -4,7 +4,7 @@ import copy
 import torch
 import torch.nn as nn
 from source.agents.agent import Agent
-from hopfield import HopfieldLayer
+from source.hopfield import HopfieldLayer
 
 
 class HQN(Agent):
