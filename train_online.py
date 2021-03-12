@@ -10,9 +10,10 @@ from torch.utils.tensorboard import SummaryWriter
 from source.buffer import ReplayBuffer
 from source.evaluation import evaluate
 from source.agents.dqn import DQN
+from source.agents.random import Random
 
 
-def train_online(experiment, envid='CartPole-v1', run=1):
+def train_online(experiment, envid='CartPole-v1', run=1, use_random=False):
 
     seed = 42
     batch_size = 32
@@ -23,12 +24,16 @@ def train_online(experiment, envid='CartPole-v1', run=1):
     train_every = 1
     train_start_iter = batch_size
 
-    writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}_{envid}_online_run{run}"))
+    writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}", f"{envid}_online_run{run}"))
 
     env = gym.make(envid)
     eval_env = copy.deepcopy(env)
     obs_space = len(env.observation_space.high)
-    agent = DQN(obs_space, env.action_space.n, seed=seed)
+
+    if use_random:
+        agent = Random(obs_space, env.action_space.n, seed=seed)
+    else:
+        agent = DQN(obs_space, env.action_space.n, seed=seed)
 
     # two buffers, one for learning, one for storing all transitions!
     buffer = ReplayBuffer(obs_space, buffer_size, batch_size, seed=seed)
@@ -39,6 +44,7 @@ def train_online(experiment, envid='CartPole-v1', run=1):
     eval_env.seed(seed)
     torch.manual_seed(seed)
 
+    ep_rewards = []
     all_rewards = []
     done = True
     ep = 0
@@ -47,6 +53,8 @@ def train_online(experiment, envid='CartPole-v1', run=1):
         # Reset if environment is done
         if done:
             if iteration > 0:
+                ep_rewards.append(ep_reward)
+                writer.add_scalar("train/Reward (SMA)", np.mean(ep_rewards[-100:]), ep)
                 writer.add_scalar("train/Reward", ep_reward, ep)
                 writer.add_scalar("train/Values", np.nanmean(values), ep)
                 writer.add_scalar("train/Entropy", np.nanmean(entropies), ep)
@@ -82,7 +90,8 @@ def train_online(experiment, envid='CartPole-v1', run=1):
             all_rewards = evaluate(eval_env, agent, writer, all_rewards, over_episodes=mean_over)
 
     # save buffer for offline training
-    with open(os.path.join("data", f"ex{experiment}_{envid}_run{run}.pkl"), "wb") as f:
+    os.makedirs(os.path.join("data", f"ex{experiment}"), exist_ok=True)
+    with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{run}.pkl"), "wb") as f:
         pickle.dump(savebuffer, f)
 
     # mean rewards
@@ -98,10 +107,10 @@ def train_online(experiment, envid='CartPole-v1', run=1):
 if __name__ == "__main__":
 
     envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0', 'LunarLander-v2']
-    envid = envs[1]
+    envid = envs[2]
     print("Solving ", envid, " online.")
 
-    agent = train_online(99, envid, run=99)
+    agent = train_online(1, envid, run=1, use_random=True)
 
     # showcase policy
     env = gym.make(envid)

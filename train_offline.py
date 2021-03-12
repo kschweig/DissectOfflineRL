@@ -25,7 +25,7 @@ def train_offline(experiment, envid, agent_type="DQN", transitions=200000, batch
     agent = get_agent(agent_type, obs_space, env.action_space.n, seed)
 
     # load saved buffer
-    with open(os.path.join("data", f"ex{experiment}_{envid}_run{use_run}.pkl"), "rb") as f:
+    with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{use_run}.pkl"), "rb") as f:
         buffer = pickle.load(f)
 
     # configure buffer
@@ -46,7 +46,7 @@ def train_offline(experiment, envid, agent_type="DQN", transitions=200000, batch
     buffer.set_seed(seed)
     torch.manual_seed(seed)
 
-    writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}_{envid}_{agent_type}_run{run}"))
+    writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}", f"{envid}_{agent_type}_run{run}"))
 
     all_rewards = []
 
@@ -76,12 +76,12 @@ def train_offline(experiment, envid, agent_type="DQN", transitions=200000, batch
 if __name__ == "__main__":
 
     envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0', 'LunarLander-v2']
-    envid = envs[0]
+    envid = envs[2]
     agent_type = "REM"
 
     print("solving ", envid, " offline with ", agent_type)
 
-    agent = train_offline(99, envid, agent_type, batch_size=256, run=93)
+    agent = train_offline(1, envid, agent_type, transitions=200000, batch_size=128, run=2, use_run=1)
 
     # showcase policy
     env = gym.make(envid)
