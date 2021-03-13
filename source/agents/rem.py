@@ -36,7 +36,7 @@ class REM(Agent):
         self.target_update_freq = 1
 
         # Q-Networks
-        self.Q = Network(self.obs_space, self.action_space, heads=heads).to(self.device)
+        self.Q = Network(self.obs_space, self.action_space, heads=heads, seed=seed).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
 
         # Optimization
@@ -109,8 +109,10 @@ class REM(Agent):
 
 class Network(nn.Module):
 
-    def __init__(self, num_state, num_actions, heads):
+    def __init__(self, num_state, num_actions, heads, seed):
         super(Network, self).__init__()
+
+        torch.manual_seed(seed)
 
         self.rng = np.random.default_rng(seed=num_state)
         self.heads = heads

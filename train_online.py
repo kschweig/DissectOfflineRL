@@ -3,6 +3,7 @@ import gym
 import copy
 import torch
 import pickle
+import warnings
 import numpy as np
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
@@ -13,9 +14,8 @@ from source.agents.dqn import DQN
 from source.agents.random import Random
 
 
-def train_online(experiment, envid='CartPole-v1', run=1, use_random=False):
+def train_online(experiment, envid='CartPole-v1', run=1, use_random=False, seed=42):
 
-    seed = 42
     batch_size = 32
     buffer_size = 50000
     transitions = 200000
@@ -49,15 +49,18 @@ def train_online(experiment, envid='CartPole-v1', run=1, use_random=False):
     done = True
     ep = 0
 
-    for iteration in tqdm(range(transitions)):
+    for iteration in tqdm(range(transitions), desc=f"Behavioral policy ({envid}), run {run}"):
         # Reset if environment is done
         if done:
             if iteration > 0:
                 ep_rewards.append(ep_reward)
-                writer.add_scalar("train/Reward (SMA)", np.mean(ep_rewards[-100:]), ep)
-                writer.add_scalar("train/Reward", ep_reward, ep)
-                writer.add_scalar("train/Values", np.nanmean(values), ep)
-                writer.add_scalar("train/Entropy", np.nanmean(entropies), ep)
+
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    writer.add_scalar("train/Reward (SMA)", np.mean(ep_rewards[-100:]), ep)
+                    writer.add_scalar("train/Reward", ep_reward, ep)
+                    writer.add_scalar("train/Values", np.nanmean(values), ep)
+                    writer.add_scalar("train/Entropy", np.nanmean(entropies), ep)
 
             state = env.reset()
             ep_reward, values, entropies = 0, [], []
@@ -96,7 +99,7 @@ def train_online(experiment, envid='CartPole-v1', run=1, use_random=False):
 
     # mean rewards
     mean_rewards = []
-    for i in range(len(all_rewards)):
+    for i in range(1, len(all_rewards)):
         from_ = max(0, i-mean_over)
         mean_rewards.append(np.mean(all_rewards[from_:i]))
 
@@ -107,10 +110,10 @@ def train_online(experiment, envid='CartPole-v1', run=1, use_random=False):
 if __name__ == "__main__":
 
     envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0', 'LunarLander-v2']
-    envid = envs[2]
+    envid = envs[0]
     print("Solving ", envid, " online.")
 
-    agent = train_online(1, envid, run=1, use_random=True)
+    agent = train_online(2, envid, run=1, use_random=False)
 
     # showcase policy
     env = gym.make(envid)

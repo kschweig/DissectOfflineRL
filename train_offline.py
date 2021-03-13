@@ -50,7 +50,7 @@ def train_offline(experiment, envid, agent_type="DQN", transitions=200000, batch
 
     all_rewards = []
 
-    for iter in tqdm(range(transitions)):
+    for iter in tqdm(range(transitions), desc=f"{agent_type} ({envid}), run {run}"):
         if use_progression:
             minimum = max(0, iter - buffer_size)
             maximum = max(batch_size, iter)
@@ -65,7 +65,7 @@ def train_offline(experiment, envid, agent_type="DQN", transitions=200000, batch
 
     # mean rewards
     mean_rewards = []
-    for i in range(len(all_rewards)):
+    for i in range(1, len(all_rewards)):
         from_ = max(0, i-mean_over)
         mean_rewards.append(np.mean(all_rewards[from_:i]))
 

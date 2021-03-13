@@ -3,7 +3,7 @@ from train_offline import train_offline
 from multiprocessing import Pool
 
 """
-Test Random behavioural policy
+Test DQN behavioural policy
 """
 
 # project parameters
@@ -11,14 +11,13 @@ envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0', 'LunarLander-v2']
 agent_types = ["DQN", "REM"]
 multiple_runs = 2
 # experiment parameters
-experiment = 1
+experiment = 2
 seed = 42
-# hyperparameters for online training
-use_random = True
-# hyperparameters for offline training
+# hyper-parameters for online training
+use_random = False
+# hyper-parameters for offline training
 transitions = 200000
 batch_size = 128
-
 
 
 def train(envid):
@@ -32,3 +31,5 @@ def train(envid):
 if __name__ == '__main__':
     with Pool(len(envs)) as p:
         p.map(train, envs)
+
+

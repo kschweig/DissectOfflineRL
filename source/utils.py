@@ -9,7 +9,7 @@ def get_agent(agent_type, obs_space, num_actions, seed):
     if agent_type == "DQN":
         return DQN(obs_space, num_actions, seed=seed)
     elif agent_type == "REM":
-        return REM(obs_space, num_actions, seed=seed)
+        return REM(obs_space, num_actions, heads=200, seed=seed)
     elif agent_type == "HQN":
         return HQN(obs_space, num_actions, seed=seed)
     else:
