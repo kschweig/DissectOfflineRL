@@ -7,12 +7,12 @@ Test Batch Constrained Q-learning
 """
 
 # project parameters
-envs = ['MiniGrid-Empty-Random-6x6-v0', 'MiniGrid-Unlock-v0', 'MiniGrid-DistShift1-v0', 'MiniGrid-LavaCrossingS9N1-v0']
-discounts = [0.95]*4
+envs = ['MiniGrid-Empty-Random-6x6-v0']
+discounts = [0.95]
 agent_types = ["BC"]
 multiple_runs = 2
 # experiment parameters
-experiment = 3
+experiment = 5
 seed = 42
 # hyperparameters for online training
 behavioral = "QRDQN"

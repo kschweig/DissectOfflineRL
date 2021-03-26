@@ -15,7 +15,7 @@ as a baseline.
 - [ ] [BCQ](https://arxiv.org/abs/1910.01708)
 - [x] [QR-DQN](https://arxiv.org/abs/1710.10044)
 - [ ] [SAC](https://arxiv.org/abs/1801.01290) ([Discrete](https://arxiv.org/abs/1910.07207))
-- [ ] Behavioral Cloning (BC)
+- [x] Behavioral Cloning (BC)
 
 #### Environments
 

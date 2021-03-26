@@ -75,32 +75,40 @@ class QRDQN(Agent):
             target_Qs = self.Q_target.forward(next_state)
             action_indices = torch.argmax(target_Qs.mean(dim=2), dim=1, keepdim=True)
             target_Qs = target_Qs.gather(1, action_indices.unsqueeze(2).expand(-1, 1, self.quantiles))
-            assert target_Qs.shape == (buffer.batch_size, 1, self.quantiles), f"was {target_Qs.shape} instead"
             target_Qs = reward.unsqueeze(1) + not_done.unsqueeze(1) * self.discount * target_Qs
 
         # Get current Q estimate
         current_Qs = self.Q(state).gather(1, action.unsqueeze(2).expand(-1, 1,self.quantiles)).transpose(1, 2)
 
+        # correct dimensions?
+        assert target_Qs.shape == (buffer.batch_size, 1, self.quantiles), \
+            f"Expected {(buffer.batch_size, 1, self.quantiles)}, was {target_Qs.shape} instead"
+        assert current_Qs.shape == (buffer.batch_size, self.quantiles, 1), \
+            f"Expected {(buffer.batch_size, self.quantiles, 1)}, was {current_Qs.shape} instead"
+
+        # expand along singular dimensions
+        target_Qs = target_Qs.expand(-1, self.quantiles, self.quantiles)
+        current_Qs = current_Qs.expand(-1, self.quantiles, self.quantiles)
+
         # Compute TD error
         td_error = target_Qs - current_Qs
-        assert td_error.shape == (buffer.batch_size, self.quantiles, self.quantiles), f"was {td_error.shape} instead"
+        assert td_error.shape == (buffer.batch_size, self.quantiles, self.quantiles), \
+            f"Expected {(buffer.batch_size, self.quantiles, self.quantiles)}, was {td_error.shape} instead"
 
-        # huber loss, not using nn.SmoothL1Loss from torch as it does not interact correctly with dimensions
-        k = 1.0
-        huber_l = torch.where(td_error.abs() <= k, 0.5 * td_error.pow(2), k * (td_error.abs() - 0.5 * k))
-        #huber_l = self.huber(current_Qs, target_Qs)
+        # calculate loss through TD
+        huber_l = self.huber(current_Qs, target_Qs)
 
         # calculate quantile loss
-        quantil_l = abs(self.quantile_tau - (td_error.detach() < 0).float()) * huber_l
-        loss = quantil_l.sum(dim=1).mean(dim=1).mean()
+        quantile_loss = abs(self.quantile_tau - (td_error.detach() < 0).float()) * huber_l
+        quantile_loss = quantile_loss.sum(dim=1).mean(dim=1).mean()
 
         # log temporal difference error and quantile loss
         writer.add_scalar("train/TD-error", torch.mean(huber_l).detach().cpu().item(), self.iterations)
-        writer.add_scalar("train/quantil_l", torch.mean(loss).detach().cpu().item(), self.iterations)
+        writer.add_scalar("train/quantile_loss", torch.mean(quantile_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q
         self.optimizer.zero_grad()
-        loss.backward()
+        quantile_loss.backward()
         self.optimizer.step()
 
         self.iterations += 1
