@@ -28,5 +28,8 @@ def evaluate(env, agent, writer, all_rewards, over_episodes=100):
 
 def entropy(values):
     probs = F.softmax(values, dim=1).detach().cpu().numpy()
+    # if entropy degrades
+    if np.min(probs) < 1e-5:
+        return np.nan
     return -np.sum(probs * np.log(probs))
 

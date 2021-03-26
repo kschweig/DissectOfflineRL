@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from source.evaluation import entropy
 from source.agents.agent import Agent
+from source.networks.critic import Critic
 
 
 class DQN(Agent):
@@ -12,8 +13,9 @@ class DQN(Agent):
     def __init__(self,
                  obs_space,
                  action_space,
+                 discount,
                  seed=None):
-        super(DQN, self).__init__(obs_space, action_space, seed)
+        super(DQN, self).__init__(obs_space, action_space, discount, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
@@ -22,11 +24,8 @@ class DQN(Agent):
         self.slope = (self.end_eps - self.initial_eps) / self.eps_decay_period
         self.eval_eps = 0.
 
-        # discounting factor gamma
-        self.discount = 0.95
-
         # loss function
-        self.huber = nn.MSELoss()
+        self.huber = nn.SmoothL1Loss()
 
         # Number of training iterations
         self.iterations = 0
@@ -35,11 +34,11 @@ class DQN(Agent):
         self.target_update_freq = 1
 
         # Q-Networks
-        self.Q = Network(self.obs_space, self.action_space).to(self.device)
+        self.Q = Critic(self.obs_space, self.action_space).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
 
         # Optimization
-        self.lr = 0.001
+        self.lr = 1e-4
         self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
 
     def policy(self, state, eval=False):
@@ -103,32 +102,3 @@ class DQN(Agent):
         self.Q.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_Q.pt")))
         self.Q_target = copy.deepcopy(self.Q)
         self.optimizer.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_optim.pt")))
-
-
-
-class Network(nn.Module):
-
-    def __init__(self, num_state, num_actions):
-        super(Network, self).__init__()
-
-        self.fnn = nn.Sequential(
-            nn.Linear(in_features=num_state, out_features=12),
-            nn.SELU(),
-            nn.Linear(in_features=12, out_features=12),
-            nn.SELU(),
-            nn.Linear(in_features=12, out_features=12),
-            nn.SELU(),
-            nn.Linear(in_features=12, out_features=num_actions)
-        )
-
-    def forward(self, state):
-        if len(state.shape) == 1:
-            state = state.unsqueeze(dim=0)
-
-        # normalize
-        #state = normalize(state)
-
-        return self.fnn(state)
-
-    def evaluate(self, state):
-        return self.forward(state)

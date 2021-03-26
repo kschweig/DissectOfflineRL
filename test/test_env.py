@@ -6,8 +6,8 @@ max transitions: 500, reward: 1 per timestep if not done,
 max score: 500, solved at >= 475 over 100 episodes
 
 Acrobot-v1:
-max transitions: not bounded , reward: -1 per timestep if not done,
-max score: as high as possible, no bound given for solving
+max transitions: 500 , reward: -1 per timestep if not done,
+max score: as high as possible, no bound given for solving, I achieved ~-85
 
 MountainCar-v0:
 max transitions: 200, reward: -1 per timestep if not done,

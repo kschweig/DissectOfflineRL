@@ -5,28 +5,25 @@ import torch
 import torch.nn as nn
 from source.evaluation import entropy
 from source.agents.agent import Agent
-from source.networks.critic import RemCritic
+from source.networks.critic import QrCritic
 
 
-class REM(Agent):
+class QRDQN(Agent):
 
     def __init__(self,
                  obs_space,
                  action_space,
                  discount,
-                 heads=200,
+                 quantiles = 50,
                  seed=None):
-        super(REM, self).__init__(obs_space, action_space, discount, seed)
+        super(QRDQN, self).__init__(obs_space, action_space, discount, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
         self.end_eps = 1e-2
         self.eps_decay_period = 1000
         self.slope = (self.end_eps - self.initial_eps) / self.eps_decay_period
-        self.eval_eps = 0
-
-        # loss function
-        self.huber = nn.SmoothL1Loss()
+        self.eval_eps = 0.
 
         # Number of training iterations
         self.iterations = 0
@@ -34,9 +31,16 @@ class REM(Agent):
         # After how many training steps 'snap' target to main network?
         self.target_update_freq = 1
 
+        # Quantiles
+        self.quantiles = quantiles
+        self.quantile_tau = torch.FloatTensor([i / self.quantiles for i in range(1, self.quantiles + 1)]).to(self.device)
+
         # Q-Networks
-        self.Q = RemCritic(self.obs_space, self.action_space, heads=heads).to(self.device)
+        self.Q = QrCritic(self.obs_space, self.action_space, quantiles=quantiles).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
+
+        # huber loss
+        self.huber = nn.SmoothL1Loss(reduction='none')
 
         # Optimization
         self.lr = 1e-4
@@ -68,20 +72,35 @@ class REM(Agent):
 
         # Compute the target Q value
         with torch.no_grad():
-            target_Q = reward + not_done * self.discount * self.Q_target.forward(next_state).max(1, keepdim=True)[0]
+            target_Qs = self.Q_target.forward(next_state)
+            action_indices = torch.argmax(target_Qs.mean(dim=2), dim=1, keepdim=True)
+            target_Qs = target_Qs.gather(1, action_indices.unsqueeze(2).expand(-1, 1, self.quantiles))
+            assert target_Qs.shape == (buffer.batch_size, 1, self.quantiles), f"was {target_Qs.shape} instead"
+            target_Qs = reward.unsqueeze(1) + not_done.unsqueeze(1) * self.discount * target_Qs
 
         # Get current Q estimate
-        current_Q = self.Q.forward(state).gather(1, action)
+        current_Qs = self.Q(state).gather(1, action.unsqueeze(2).expand(-1, 1,self.quantiles)).transpose(1, 2)
 
-        # Compute Q loss (Huber loss)
-        Q_loss = self.huber(current_Q, target_Q)
+        # Compute TD error
+        td_error = target_Qs - current_Qs
+        assert td_error.shape == (buffer.batch_size, self.quantiles, self.quantiles), f"was {td_error.shape} instead"
 
-        # log temporal difference error
-        writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
+        # huber loss, not using nn.SmoothL1Loss from torch as it does not interact correctly with dimensions
+        k = 1.0
+        huber_l = torch.where(td_error.abs() <= k, 0.5 * td_error.pow(2), k * (td_error.abs() - 0.5 * k))
+        #huber_l = self.huber(current_Qs, target_Qs)
+
+        # calculate quantile loss
+        quantil_l = abs(self.quantile_tau - (td_error.detach() < 0).float()) * huber_l
+        loss = quantil_l.sum(dim=1).mean(dim=1).mean()
+
+        # log temporal difference error and quantile loss
+        writer.add_scalar("train/TD-error", torch.mean(huber_l).detach().cpu().item(), self.iterations)
+        writer.add_scalar("train/quantil_l", torch.mean(loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q
         self.optimizer.zero_grad()
-        Q_loss.backward()
+        loss.backward()
         self.optimizer.step()
 
         self.iterations += 1
@@ -90,7 +109,7 @@ class REM(Agent):
             self.Q_target.load_state_dict(self.Q.state_dict())
 
     def get_name(self) -> str:
-        return "REM"
+        return "QRDQN"
 
     def determinancy(self):
         return round((1-max(self.slope * self.iterations + self.initial_eps, self.end_eps))*100, 2)

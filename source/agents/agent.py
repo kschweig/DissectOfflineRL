@@ -7,9 +7,11 @@ class Agent(ABC):
     def __init__(self,
                  obs_space,
                  action_space,
+                 discount,
                  seed=None):
         self.obs_space = obs_space
         self.action_space = action_space
+        self.discount = discount
         self.rng = np.random.default_rng(seed=seed)
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
