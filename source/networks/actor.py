@@ -7,8 +7,6 @@ class Actor(nn.Module):
     def __init__(self, num_state, num_actions):
         super(Actor, self).__init__()
 
-        print(num_state, num_actions)
-
         num_hidden = 256
 
         self.fnn = nn.Sequential(

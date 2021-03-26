@@ -74,4 +74,3 @@ class QrCritic(Critic):
         state = self.forward(state)
 
         return torch.mean(state, dim=2)
-

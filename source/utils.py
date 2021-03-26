@@ -5,6 +5,7 @@ from source.wrappers import FlatImgObsWrapper
 from source.agents.dqn import DQN
 from source.agents.rem import REM
 from source.agents.qrdqn import QRDQN
+from source.agents.bcq import BCQ
 from source.agents.bc import BehavioralCloning
 from source.agents.random import Random
 
@@ -14,10 +15,12 @@ def get_agent(agent_type, obs_space, num_actions, discount, seed):
         return DQN(obs_space, num_actions, discount, seed=seed)
     elif agent_type == "REM":
         return REM(obs_space, num_actions, discount, heads=200, seed=seed)
-    elif agent_type == "BC":
-        return BehavioralCloning(obs_space, num_actions, discount, seed=seed)
     elif agent_type == "QRDQN":
         return QRDQN(obs_space, num_actions, discount, quantiles=50, seed=seed)
+    elif agent_type == "BCQ":
+        return BCQ(obs_space, num_actions, discount, seed=seed)
+    elif agent_type == "BC":
+        return BehavioralCloning(obs_space, num_actions, discount, seed=seed)
     elif agent_type == "Random":
         return Random(obs_space, num_actions, discount, seed=seed)
     else:

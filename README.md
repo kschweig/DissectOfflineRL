@@ -12,7 +12,7 @@ as a baseline.
 
 - [x] [DQN](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf) ([Double](https://arxiv.org/abs/1509.06461))
 - [x] [REM](https://arxiv.org/abs/1907.04543)
-- [ ] [BCQ](https://arxiv.org/abs/1910.01708)
+- [x] [BCQ](https://arxiv.org/abs/1910.01708)
 - [x] [QR-DQN](https://arxiv.org/abs/1710.10044)
 - [ ] [SAC](https://arxiv.org/abs/1801.01290) ([Discrete](https://arxiv.org/abs/1910.07207))
 - [x] Behavioral Cloning (BC)

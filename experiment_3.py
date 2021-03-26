@@ -7,9 +7,11 @@ Test Batch Constrained Q-learning
 """
 
 # project parameters
-envs = ['MiniGrid-Empty-Random-6x6-v0']
-discounts = [0.95]
-agent_types = ["BC"]
+envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0']
+discounts = [0.9, 0.99, 0.99]
+#envs = ['MiniGrid-Empty-Random-6x6-v0', 'MiniGrid-Unlock-v0', 'MiniGrid-DistShift1-v0', 'MiniGrid-LavaCrossingS9N1-v0']
+#discounts = [0.95]*4
+agent_types = ["BCQ"]
 multiple_runs = 2
 # experiment parameters
 experiment = 5
@@ -32,4 +34,4 @@ def train(args):
 
 if __name__ == '__main__':
     with Pool(len(envs), maxtasksperchild=1) as p:
-        p.map(train, zip(envs,discounts))
+        p.map(train, zip(envs, discounts))
