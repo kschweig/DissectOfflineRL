@@ -1,7 +1,7 @@
-from source.agents.agent import Agent
-import numpy as np
-from source.evaluation import entropy
 import torch
+import numpy as np
+from .agent import Agent
+from ..utils.evaluation import entropy
 
 
 class Random(Agent):

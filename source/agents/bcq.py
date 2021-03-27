@@ -4,10 +4,10 @@ import copy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from source.evaluation import entropy
-from source.agents.agent import Agent
-from source.networks.critic import Critic
-from source.networks.actor import Actor
+from .agent import Agent
+from ..utils.evaluation import entropy
+from ..networks.critic import Critic
+from ..networks.actor import Actor
 
 
 class BCQ(Agent):
@@ -40,10 +40,10 @@ class BCQ(Agent):
         self.target_update_freq = 1
 
         # Q-Networks
-        self.Q = Critic(self.obs_space, self.action_space).to(self.device)
+        self.Q = Critic(self.obs_space, self.action_space, seed).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
         # BCQ has a separate Actor, as I have no common vision network
-        self.actor = Actor(self.obs_space, self.action_space).to(self.device)
+        self.actor = Actor(self.obs_space, self.action_space, seed).to(self.device)
 
         # Optimization
         self.lr = 1e-4

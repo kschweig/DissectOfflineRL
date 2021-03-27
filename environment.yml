@@ -20,6 +20,5 @@ dependencies:
   - jupyter
   - pip:
       - gym
-      - Box2D
       - gym-minigrid
       - tensorboard

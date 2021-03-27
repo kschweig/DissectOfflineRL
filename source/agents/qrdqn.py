@@ -3,9 +3,9 @@ import os
 import copy
 import torch
 import torch.nn as nn
-from source.evaluation import entropy
-from source.agents.agent import Agent
-from source.networks.critic import QrCritic
+from .agent import Agent
+from ..utils.evaluation import entropy
+from ..networks.critic import QrCritic
 
 
 class QRDQN(Agent):
@@ -36,7 +36,7 @@ class QRDQN(Agent):
         self.quantile_tau = torch.FloatTensor([i / self.quantiles for i in range(1, self.quantiles + 1)]).to(self.device)
 
         # Q-Networks
-        self.Q = QrCritic(self.obs_space, self.action_space, quantiles=quantiles).to(self.device)
+        self.Q = QrCritic(self.obs_space, self.action_space, seed, quantiles).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
 
         # huber loss

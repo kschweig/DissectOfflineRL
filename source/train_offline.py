@@ -4,8 +4,8 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from source.evaluation import evaluate
-from source.utils import get_agent, make_env
+from .utils.evaluation import evaluate
+from .utils.utils import get_agent, make_env
 
 
 def train_offline(experiment, envid, agent_type="DQN", discount=0.95, transitions=200000, batch_size=128,

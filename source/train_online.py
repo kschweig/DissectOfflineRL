@@ -6,16 +6,14 @@ import numpy as np
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
-from source.buffer import ReplayBuffer
-from source.evaluation import evaluate
-from source.utils import get_agent, make_env
+from .utils.buffer import ReplayBuffer
+from .utils.evaluation import evaluate
+from .utils.utils import get_agent, make_env
 
 
-def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1', run=1, seed=42):
+def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1', transitions=200000, buffer_size=50000, run=1, seed=42):
 
     batch_size = 32
-    buffer_size = 50000
-    transitions = 200000
     evaluate_every = 100
     mean_over = 100
     train_every = 1

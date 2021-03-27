@@ -1,10 +1,10 @@
-from source.agents.agent import Agent
 import numpy as np
-from source.evaluation import entropy
 import os
 import torch
 import torch.nn as nn
-from source.networks.actor import Actor
+from .agent import Agent
+from ..utils.evaluation import entropy
+from ..networks.actor import Actor
 
 
 class BehavioralCloning(Agent):
@@ -23,7 +23,7 @@ class BehavioralCloning(Agent):
         self.ce = nn.CrossEntropyLoss()
 
         # Explicit Policy
-        self.actor = Actor(obs_space, action_space).to(self.device)
+        self.actor = Actor(obs_space, action_space, seed).to(self.device)
 
         # Optimization
         self.lr = 0.001

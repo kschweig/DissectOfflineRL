@@ -1,13 +1,13 @@
 import numpy as np
 import gym
 import gym_minigrid
-from source.wrappers import FlatImgObsWrapper
-from source.agents.dqn import DQN
-from source.agents.rem import REM
-from source.agents.qrdqn import QRDQN
-from source.agents.bcq import BCQ
-from source.agents.bc import BehavioralCloning
-from source.agents.random import Random
+from .wrappers import FlatImgObsWrapper
+from ..agents.dqn import DQN
+from ..agents.rem import REM
+from ..agents.qrdqn import QRDQN
+from ..agents.bcq import BCQ
+from ..agents.bc import BehavioralCloning
+from ..agents.random import Random
 
 
 def get_agent(agent_type, obs_space, num_actions, discount, seed):

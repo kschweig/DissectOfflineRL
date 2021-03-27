@@ -4,8 +4,11 @@ import torch.nn as nn
 
 class Actor(nn.Module):
 
-    def __init__(self, num_state, num_actions):
+    def __init__(self, num_state, num_actions, seed):
         super(Actor, self).__init__()
+
+        # set seed
+        torch.manual_seed(seed)
 
         num_hidden = 256
 

@@ -3,9 +3,9 @@ import os
 import copy
 import torch
 import torch.nn as nn
-from source.evaluation import entropy
-from source.agents.agent import Agent
-from source.networks.critic import RemCritic
+from .agent import Agent
+from ..utils.evaluation import entropy
+from ..networks.critic import RemCritic
 
 
 class REM(Agent):
@@ -35,7 +35,7 @@ class REM(Agent):
         self.target_update_freq = 1
 
         # Q-Networks
-        self.Q = RemCritic(self.obs_space, self.action_space, heads=heads).to(self.device)
+        self.Q = RemCritic(self.obs_space, self.action_space, seed, heads).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
 
         # Optimization

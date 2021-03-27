@@ -4,8 +4,11 @@ import torch.nn as nn
 
 class Critic(nn.Module):
 
-    def __init__(self, num_state, num_actions, n_estimates=1):
+    def __init__(self, num_state, num_actions, seed, n_estimates=1):
         super(Critic, self).__init__()
+
+        # set seed
+        torch.manual_seed(seed)
 
         self.num_actions = num_actions
         num_hidden = 256
@@ -39,8 +42,8 @@ class Critic(nn.Module):
 
 class RemCritic(Critic):
 
-    def __init__(self, num_state, num_actions, heads):
-        super(RemCritic, self).__init__(num_state, num_actions, heads)
+    def __init__(self, num_state, num_actions, seed, heads):
+        super(RemCritic, self).__init__(num_state, num_actions, seed, heads)
 
         self.heads = heads
 
@@ -60,8 +63,8 @@ class RemCritic(Critic):
 
 class QrCritic(Critic):
 
-    def __init__(self, num_state, num_actions, quantiles):
-        super(QrCritic, self).__init__(num_state, num_actions, quantiles)
+    def __init__(self, num_state, num_actions, seed, quantiles):
+        super(QrCritic, self).__init__(num_state, num_actions, seed, quantiles)
 
         self.quantiles = quantiles
 
