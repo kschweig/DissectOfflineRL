@@ -73,8 +73,11 @@ class SAC(Agent):
                 state = torch.FloatTensor(state).to(self.device)
                 actions = self.actor.evaluate(state).cpu()
                 actions = F.softmax(actions, dim=1)
+                q1_vals = self.Q1.evaluate(state).cpu()
+                q2_vals = self.Q2.evaluate(state).cpu()
+                action = actions.argmax().item()
                 if eval == True:
-                    return actions.argmax().item(), np.nan, entropy(actions)
+                    return action, torch.min(q1_vals[0,action], q2_vals[0,action]), entropy(actions)
                 else:
                     dist = Categorical(actions.squeeze(0))
                     return dist.sample().item(), np.nan, entropy(actions)
