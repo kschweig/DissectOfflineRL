@@ -7,19 +7,19 @@ Test Batch Constrained Q-learning
 """
 
 # project parameters
-envs = ['MiniGrid-Empty-Random-6x6-v0']
+envs = ['CartPole-v1']
 discounts = [0.95]
 #envs = ['MiniGrid-Empty-Random-6x6-v0', 'MiniGrid-Unlock-v0', 'MiniGrid-DistShift1-v0', 'MiniGrid-LavaCrossingS9N1-v0']
 #discounts = [0.95]*4
-agent_types = ["BCQ"]
+agent_types = ["BC"]
 multiple_runs = 2
 # experiment parameters
 experiment = 5
 seed = 42
 # hyperparameters for online training
-behavioral = "QRDQN"
+behavioral = "SAC"
 # hyperparameters for offline training
-transitions = 20000
+transitions = 200000
 batch_size = 128
 
 

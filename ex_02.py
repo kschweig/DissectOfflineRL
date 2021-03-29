@@ -3,16 +3,16 @@ from source.train_offline import train_offline
 from multiprocessing import Pool
 
 """
-Test DQN behavioural policy
+Test Batch Constrained Q-learning
 """
 
 # project parameters
-envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0', 'MiniGrid-Empty-Random-6x6-v0']
-discounts = [0.9, 0.99, 0.95, 0.95]
-agent_types = ["DQN", "REM"]
+envs = ['MiniGrid-Empty-Random-6x6-v0', 'MiniGrid-Unlock-v0', 'MiniGrid-DistShift1-v0', 'MiniGrid-LavaCrossingS9N1-v0']
+discounts = [0.95]*4
+agent_types = ["BC", "SAC", "BCQ", "DQN", "QRDQN"]
 multiple_runs = 2
 # experiment parameters
-experiment = 2
+experiment = 4
 seed = 42
 # hyperparameters for online training
 behavioral = "DQN"
@@ -34,4 +34,4 @@ def train(args):
 
 if __name__ == '__main__':
     with Pool(len(envs), maxtasksperchild=1) as p:
-        p.map(train, zip(envs,discounts))
+        p.map(train, zip(envs, discounts))

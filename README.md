@@ -14,7 +14,7 @@ as a baseline.
 - [x] [REM](https://arxiv.org/abs/1907.04543)
 - [x] [BCQ](https://arxiv.org/abs/1910.01708)
 - [x] [QR-DQN](https://arxiv.org/abs/1710.10044)
-- [ ] [SAC](https://arxiv.org/abs/1801.01290) ([Discrete](https://arxiv.org/abs/1910.07207))
+- [x] [SAC](https://arxiv.org/abs/1801.01290) ([Discrete](https://arxiv.org/abs/1910.07207))
 - [x] Behavioral Cloning (BC)
 
 #### Environments
@@ -33,12 +33,13 @@ effects of CNN's will be lost.
     - [x] [Acrobot-v1](https://gym.openai.com/envs/Acrobot-v1/)
 - [x] [Minigrid](https://github.com/maximecb/gym-minigrid)
     - [x] [MiniGrid-Empty-Random-6x6-v0](https://github.com/maximecb/gym-minigrid#empty-environment)
-    - [ ] [MiniGrid-Unlock-v0](https://github.com/maximecb/gym-minigrid#unlock-environment)
-    - [ ] [MiniGrid-DistShift1-v0](https://github.com/maximecb/gym-minigrid#distributional-shift-environment)
+    - [x] [MiniGrid-Unlock-v0](https://github.com/maximecb/gym-minigrid#unlock-environment)
+    - [x] [MiniGrid-DistShift1-v0](https://github.com/maximecb/gym-minigrid#distributional-shift-environment)
       - there exists a MiniGrid-DistShift2-v0 with a slight modification, can test distribution shift on that
-    - [ ] [MiniGrid-LavaCrossingS9N1-v0](https://github.com/maximecb/gym-minigrid#lava-crossing-environment)
+    - [x] [MiniGrid-SimpleCrossingS9N1-v0](https://github.com/maximecb/gym-minigrid#simple-crossing-environment)    
+    - [x] [MiniGrid-LavaCrossingS9N1-v0](https://github.com/maximecb/gym-minigrid#lava-crossing-environment)
     - [ ] TBD
-- [ ] [MinAtar](https://github.com/kenjyoung/MinAtar)
+- [ ] [MinAtar](https://github.com/kenjyoung/MinAtar) ?
     - [ ] Breakout
     - [ ] Seaquest
     - [ ] Asterix
@@ -60,3 +61,4 @@ effects of CNN's will be lost.
   - [ ] Get insights into the benefit of the Experience Replay Buffer
     - [ ] Try to train same algorithm as behavioral on ER buffer, not on full dataset but with progression.
   - [ ] Train offline algorithm on random data first, then switch to high reward dataset. Curriculum!
+  - [ ] What happens if we train DQN with different network seed in exactly the same fashion as behavioral?

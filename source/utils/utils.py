@@ -6,6 +6,7 @@ from ..agents.dqn import DQN
 from ..agents.rem import REM
 from ..agents.qrdqn import QRDQN
 from ..agents.bcq import BCQ
+from ..agents.sac import SAC
 from ..agents.bc import BehavioralCloning
 from ..agents.random import Random
 
@@ -19,6 +20,8 @@ def get_agent(agent_type, obs_space, num_actions, discount, seed):
         return QRDQN(obs_space, num_actions, discount, quantiles=50, seed=seed)
     elif agent_type == "BCQ":
         return BCQ(obs_space, num_actions, discount, seed=seed)
+    elif agent_type == "SAC":
+        return SAC(obs_space, num_actions, discount, seed=seed)
     elif agent_type == "BC":
         return BehavioralCloning(obs_space, num_actions, discount, seed=seed)
     elif agent_type == "Random":
