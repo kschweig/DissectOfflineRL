@@ -124,8 +124,14 @@ class ReplayBuffer():
 
         self.probas = np.asarray(self.probas) / np.sum(self.probas)
 
+    def calc_norm(self, include_actions=False):
+        if include_actions:
+            self.norm = np.linalg.norm(self.state + self.action, axis=1).reshape(-1, 1)
+        else:
+            self.norm = np.linalg.norm(self.state, axis=1).reshape(-1, 1)
+
     def calc_sim(self):
-        self.norm = np.linalg.norm(self.state, axis=1).reshape(-1,1)
+        self.calc_norm()
         self.probas = np.empty((self.buffer_size, self.buffer_size))
         for i in range(self.buffer_size):
             self.probas[i] = (self.state @ self.state[i].reshape(-1, 1) / self.norm / self.norm[i]).flatten()
@@ -136,8 +142,12 @@ class ReplayBuffer():
 
     def get_closest(self, new_state):
         """
-        calc_sim must be called before this method!
+        calc_norm must be called before this method!
         """
-        sim = self.state @ new_state.reshape(-1,1) / self.norm / np.linalg.norm(new_state)
-        return self.state[sim.argmax()]
+        print(self.state.shape, new_state.shape, self.norm.shape)
+        if len(new_state.shape) == 1:
+            new_state.reshape(-1,1)
+
+        sim = self.state @ np.moveaxis(new_state, 0, 1) / self.norm / np.linalg.norm(new_state, axis=1)
+        return self.state[sim.argmax()], sim.max().item()
 

@@ -75,8 +75,8 @@ class SAC(Agent):
                 actions = F.softmax(actions, dim=1)
                 q1_vals = self.Q1.evaluate(state).cpu()
                 q2_vals = self.Q2.evaluate(state).cpu()
-                action = actions.argmax().item()
                 if eval == True:
+                    action = actions.argmax().item()
                     return action, torch.min(q1_vals[0,action], q2_vals[0,action]), entropy(actions)
                 else:
                     dist = Categorical(actions.squeeze(0))

@@ -9,13 +9,14 @@ Test Random behavioural policy
 # project parameters
 envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0']
 discounts = [0.9, 0.99, 0.95]
-agent_types = ["BC", "SAC", "BCQ", "DQN", "QRDQN"]
+agent_types = ["SAC"]
+#agent_types = ["BC", "SAC", "BCQ", "DQN", "QRDQN"]
 multiple_runs = 2
 # experiment parameters
 experiment = 1
 seed = 42
 # hyperparameters for online training
-behavioral = "SAC"
+behavioral = "DQN"
 # hyperparameters for offline training
 transitions = 200000
 batch_size = 128

@@ -9,7 +9,7 @@ Test Batch Constrained Q-learning
 # project parameters
 envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0']
 discounts = [0.9, 0.99, 0.99]
-#envs = ['MiniGrid-Empty-Random-6x6-v0', 'MiniGrid-Unlock-v0', 'MiniGrid-DistShift1-v0', 'MiniGrid-LavaCrossingS9N1-v0']
+#envs = ['MiniGrid-Empty-Random-6x6-v0', 'MiniGrid-Unlock-v0', 'MiniGrid-DistShift1-v0', 'MiniGrid-SimpleCrossingS9N1-v0']
 #discounts = [0.95]*4
 agent_types = ["BCQ"]
 multiple_runs = 2

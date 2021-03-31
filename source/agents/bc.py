@@ -2,6 +2,8 @@ import numpy as np
 import os
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from torch.distributions import Categorical
 from .agent import Agent
 from ..utils.evaluation import entropy
 from ..networks.actor import Actor
@@ -36,8 +38,10 @@ class BehavioralCloning(Agent):
         with torch.no_grad():
             state = torch.FloatTensor(state).to(self.device)
             actions = self.actor(state).cpu()
+            actions = F.softmax(actions, dim=1)
+            dist = Categorical(actions.unsqueeze(0))
 
-            return torch.argmax(actions).item(), np.nan, entropy(actions)
+            return dist.sample().item(), np.nan, entropy(actions)
 
     def train(self, buffer, writer, minimum=None, maximum=None, use_probas=False):
         # Sample replay buffer
