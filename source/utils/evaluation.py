@@ -30,6 +30,5 @@ def entropy(values):
     probs = F.softmax(values, dim=1).detach().cpu().numpy()
     # if entropy degrades
     if np.min(probs) < 1e-5:
-        return np.nan
+        return 0
     return -np.sum(probs * np.log(probs))
-

@@ -20,7 +20,7 @@ class ReplayBuffer():
         self.next_state = np.zeros((self.buffer_size, obs_space), dtype=np.float32)
         self.action = np.zeros((self.buffer_size, 1), dtype=np.uint8)
         self.reward = np.zeros((self.buffer_size, 1))
-        self.not_done = np.zeros((self.buffer_size, 1))
+        self.not_done = np.zeros((self.buffer_size, 1), dtype=np.bool_)
 
         # norm is for special experiments, probas is uniform until updated by experiments
         self.norm = np.ones((self.buffer_size))
@@ -29,10 +29,11 @@ class ReplayBuffer():
     def add(self, state, action, reward, done, next_state):
 
         self.state[self.idx] = state
-        self.next_state[self.idx] = next_state
+        # all zeros is terminal state if done, one cannot be sure that environment handled correctly.
+        self.next_state[self.idx] = next_state if not done else np.zeros_like(next_state)
         self.action[self.idx] = action
         self.reward[self.idx] = reward
-        self.not_done[self.idx] = 1. - float(done)
+        self.not_done[self.idx] = not done
 
         self.idx = (self.idx + 1) % self.buffer_size
         self.current_size = min(self.current_size + 1, self.buffer_size)
@@ -66,7 +67,7 @@ class ReplayBuffer():
         self.next_state = self.next_state[minimum:maximum]
         self.action = self.action[minimum:maximum]
         self.reward = self.reward[minimum:maximum]
-        self.not_done= self.not_done[minimum:maximum]
+        self.not_done = self.not_done[minimum:maximum]
 
         self.idx = 0
         self.current_size = maximum - minimum

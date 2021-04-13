@@ -7,7 +7,7 @@ Dissect Offline Reinforcement Learning, what do we need wrt. datasets and buffer
 #### Algorithms
 
 Algorithms in this domain need to be off-policy, the first 4 being simple value
-learning algorithms and the last is an actor-critic approach. Behavioral Cloning serves
+learning algorithms and the fifth is an actor-critic approach. The remaining three aim towards safe q-iteration. Behavioral Cloning serves
 as a baseline.
 
 - [x] [DQN](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf) ([Double](https://arxiv.org/abs/1509.06461))
@@ -54,25 +54,26 @@ effects of CNN's will be lost.
 #### Experimental ideas
 
   
-  - [ ] Follow the like of [Kmec et al., 2020](https://arxiv.org/abs/2011.14379) to assess different dataset
+  - [ ] Follow the line of [Kmec et al., 2020](https://arxiv.org/abs/2011.14379) to assess different dataset
     generation strategies on different environments by different strategies/policies (expert, ER, medium(random + expert / high stochastic expert), expert 
   - [ ] Create metrics to assess collected offline datasets (e.g. performance of BC and entropy, reward / episode structure, 
     diversity)
+  - [ ] Categorization scheme
     - [ ] Characterize RLUnplugged / D4RL
-  - [ ] Categorization scheme?
   - [ ] Benchmark various off-policy algorithms on the assessed problems, give recommendations of algorithms depending on problem structure
 and dataset metrics.
     
 
-  - [ ] If possible, assess offline performance vs online performance within a certain budget
+  - [ ] ??? If possible, assess offline performance vs online performance within a certain budget
     - [ ] Observed SAC fail in the grid world envs trained online, but heavily exceed when trained on ER buffer of DQN.
-  - [ ] Implement improvement to SPIBB (Laroche et al., 2019)(https://arxiv.org/pdf/1712.06924.pdf) which is a nice idea but not generally applicable yet as it uses density to assess whether state/action pair is part of the
+  - [ ] ??? Implement improvement to SPIBB (Laroche et al., 2019)(https://arxiv.org/pdf/1712.06924.pdf) which is a nice idea but not generally applicable yet as it uses density to assess whether state/action pair is part of the
 dataset, I would like to try an overfitted autoencoder to answer the question (i.e. train several epochs, measure worst recreation error and if new state/action
-    is within this bound it is in the dataset).
+    is within this bound it is in the dataset). (GO-explore!, #exploration)
 
 ---
     
   - [ ] Get insights into the benefit of the Experience Replay Buffer
+    - seed the environment before every episode rollout both for training and testing
   - [ ] Try to train same algorithm as behavioral on ER buffer, not on full dataset but with progression.
   - [ ] Train offline algorithm on random data first, then switch to high reward dataset. Curriculum!
   - [ ] What happens if we train DQN with different network seed in exactly the same fashion as behavioral?

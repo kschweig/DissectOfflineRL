@@ -1,13 +1,13 @@
 import numpy as np
 import gym
 import gym_minigrid
+import torch.nn.functional as F
 from .wrappers import FlatImgObsWrapper
 from ..agents.dqn import DQN
 from ..agents.rem import REM
 from ..agents.qrdqn import QRDQN
 from ..agents.bcq import BCQ
 from ..agents.sac import SAC
-from ..agents.sqn import SQN
 from ..agents.bc import BehavioralCloning
 from ..agents.random import Random
 
@@ -23,14 +23,12 @@ def get_agent(agent_type, obs_space, num_actions, discount, seed):
         return BCQ(obs_space, num_actions, discount, seed=seed)
     elif agent_type == "SAC":
         return SAC(obs_space, num_actions, discount, seed=seed)
-    elif agent_type == "SQN":
-        return SQN(obs_space, num_actions, discount, seed=seed)
     elif agent_type == "BC":
         return BehavioralCloning(obs_space, num_actions, discount, seed=seed)
     elif agent_type == "Random":
         return Random(obs_space, num_actions, discount, seed=seed)
     else:
-        print(bcolors.WARNING + "Attention, using random agent!" + bcolors.ENDC)
+        print(BColors.WARNING + "Attention, using random agent!" + BColors.ENDC)
         return Random(obs_space, num_actions, discount, seed=seed)
 
 
@@ -59,7 +57,7 @@ def cosine_similarity_n12(s1, s2, n1, n2):
     return np.sum(s1 * s2) / n1 / n2
 
 
-class bcolors:
+class BColors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKCYAN = '\033[96m'

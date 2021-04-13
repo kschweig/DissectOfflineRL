@@ -29,7 +29,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
 
     # two buffers, one for learning, one for storing all transitions!
     buffer = ReplayBuffer(obs_space, buffer_size, batch_size, seed=seed)
-    save_buffer = ReplayBuffer(obs_space, transitions, batch_size, seed=seed)
+    er_buffer = ReplayBuffer(obs_space, transitions, batch_size, seed=seed)
 
     # seeding
     env.seed(seed)
@@ -67,7 +67,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
 
         # add to buffer
         buffer.add(state, action, reward, done, next_state)
-        save_buffer.add(state, action, reward, done, next_state)
+        er_buffer.add(state, action, reward, done, next_state)
 
         # add reward, value and entropy of current step for means over episode
         ep_reward += reward
@@ -88,7 +88,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
     # save buffer for offline training
     os.makedirs(os.path.join("data", f"ex{experiment}"), exist_ok=True)
     with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{run}.pkl"), "wb") as f:
-        pickle.dump(save_buffer, f)
+        pickle.dump(er_buffer, f)
 
     # mean rewards
     mean_rewards = []
