@@ -47,11 +47,12 @@ def assess_ds(args):
 
     eval = Evaluator(buffer.state, buffer.action, buffer.reward, np.invert(buffer.not_done))
     print(envid, " Rewards:", eval.get_rewards())
+    print(envid, " Episode Lengths:", eval.get_episode_lengths())
     #eval.train_behavior_policy(batch_size=256, epochs=2)
     #print(envid," Behavioral Entropy:", eval.get_bc_entropy())
     #eval.train_value_critic(batch_size=256, epochs=3, lr=1e-3, horizon=500, verbose=True)
     #print(envid," Behavioral Value:", eval.get_value_estimate())
-    #eval.train_state_comparator(batch_size=256, epochs=5)
+    eval.train_state_comparator(batch_size=256, epochs=2)
 
     #print("same states")
     #test = eval.test_state_compare(negative_samples=0)
@@ -60,15 +61,9 @@ def assess_ds(args):
     #test = eval.test_state_compare(negative_samples=-1)
     #print(np.min(test), np.mean(test), np.max(test))
 
-    #print(eval.get_start_randomness())
-    #print(eval.get_unique_pathlength())
-
-
-    eval.train_next_state_comparator(batch_size=256, epochs=3, negative_samples=1, sparse_state=False, verbose=True)
-    test = eval.test_next_state_compare(negative_samples=0, sparse_state=True)
-    print(np.min(test), np.mean(test), np.max(test))
-    test=eval.test_next_state_compare(negative_samples=-1, sparse_state=True)
-    print(np.min(test), np.mean(test), np.max(test))
+    print(eval.get_start_randomness(compare_with=50))
+    print(eval.get_state_randomness(compare_with=1))
+    print(eval.get_episode_intersections())
 
 
 if __name__ == '__main__':

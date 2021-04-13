@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from .networks import BC, SC, NSC
 from .training import update, evaluate
-from .datasets import BCSet, VCSet, SCSet, NSCSet, StartSet
+from .datasets import BCSet, VCSet, SCSet, StateSet
 from .utils import entropy, BColors
 
 
@@ -56,10 +56,6 @@ class Evaluator():
         self.state_comparator_trained = False
         self.state_comparator = SC(num_state=self.states.shape[1], seed=self.seed)
 
-        # Network to assess if the next state is correctly predicted
-        self.next_state_comparator_trained = False
-        self.next_state_comparator = NSC(num_state=self.states.shape[1], num_actions=self.num_actions, seed=self.seed)
-
     def get_rewards(self):
 
         rewards, ep_reward = list(), 0
@@ -70,7 +66,19 @@ class Evaluator():
                 rewards.append(ep_reward)
                 ep_reward = 0
 
-        return np.mean(rewards), np.max(rewards)
+        return np.min(rewards), np.mean(rewards), np.max(rewards)
+
+    def get_episode_lengths(self):
+
+        lengths, ep_length = list(), 0
+
+        for i, done in enumerate(self.dones):
+            ep_length += 1
+            if done:
+                lengths.append(ep_length)
+                ep_length = 0
+
+        return np.min(lengths), np.mean(lengths), np.max(lengths)
 
     def get_bc_entropy(self):
         if not self.behavioral_trained:
@@ -108,24 +116,61 @@ class Evaluator():
 
         return np.min(values), np.mean(values), np.max(values)
 
-    def get_start_randomness(self, subsample=1):
+    def get_start_randomness(self, compare_with=1):
         if not self.state_comparator_trained:
             print(BColors.WARNING + "Attention, state comparator was not trained before calling get_start_randomness!" + BColors.ENDC)
 
         comparison = []
-        dl = DataLoader(StartSet(states=self.states, dones=self.dones, subsample=subsample),
+        dl = DataLoader(StateSet(states=self.states, dones=self.dones, starts=True, compare_with=compare_with),
                         batch_size=512, drop_last=False, shuffle=False, num_workers=self.workers)
 
         with torch.no_grad():
-            for state in dl:
+            for state in tqdm(dl):
                 comparison.extend(self.state_comparator(state).cpu().numpy())
 
         return np.min(comparison), np.mean(comparison), np.max(comparison)
 
-    def get_unique_episode_length(self, treshold=0.98):
+    def get_state_randomness(self, compare_with=1):
         if not self.state_comparator_trained:
-            print(BColors.WARNING + "Attention, state comparator was not trained before calling get_unique_episode_length!" + BColors.ENDC)
-        pass
+            print(BColors.WARNING + "Attention, state comparator was not trained before calling get_state_randomness!" + BColors.ENDC)
+
+        comparison = []
+        dl = DataLoader(StateSet(states=self.states, dones=self.dones, starts=False, compare_with=compare_with),
+                        batch_size=512, drop_last=False, shuffle=False, num_workers=self.workers)
+
+        with torch.no_grad():
+            for state in tqdm(dl, desc="estimate state randomness"):
+                comparison.extend(self.state_comparator(state).cpu().numpy())
+
+        return np.min(comparison), np.mean(comparison), np.max(comparison)
+
+    def get_episode_intersections(self, treshold=0.98, max_batch_size=512):
+        if not self.state_comparator_trained:
+            print(BColors.WARNING + "Attention, state comparator was not trained before calling get_episode_intersections!" + BColors.ENDC)
+
+        intersections, inter, first_idx = list(), 0, 0
+
+        for i, done in tqdm(enumerate(self.dones), desc="Calculate Episode Intersections", total=len(self.dones)):
+            if i == first_idx:
+                continue
+
+            # compare current state to every state in the episode before
+            current_state = self.states[i].reshape(1,-1)
+            compare_states = self.states[first_idx:i]
+            compare_states = np.concatenate((compare_states, np.repeat(current_state, i-first_idx, axis=0)), axis=1)
+            compare_states = torch.FloatTensor(compare_states)
+            pred = self.state_comparator(compare_states).detach().cpu().numpy()
+
+            # Increment iterations if similarity to at least one prior state is greater than 1.
+            # Not using the total number of states as that would double-count those intersections.
+            inter += len(np.where(pred > treshold)[0]) > 0
+
+            if done:
+                intersections.append(inter)
+                inter = 0
+                first_idx = i
+
+        return np.min(intersections), np.mean(intersections), np.max(intersections)
 
     def get_state_determinism(self):
         if not self.state_comparator_trained:
@@ -143,21 +188,6 @@ class Evaluator():
         with torch.no_grad():
             for state, _ in dl:
                 comparison.extend(self.state_comparator(state).cpu().numpy())
-
-        return comparison
-
-    def test_next_state_compare(self, negative_samples=0, sparse_state=False):
-        if not self.next_state_comparator_trained:
-            print(BColors.WARNING + "Attention, next_state comparator was not trained before calling test_next_state_compare!" + BColors.ENDC)
-
-        comparison = []
-        dl = DataLoader(NSCSet(states=self.states, actions=self.actions, dones=self.dones, num_actions=self.num_actions,
-                               negative_samples=negative_samples, sparse_state=sparse_state),
-                        batch_size=512, drop_last=False, shuffle=False, num_workers=self.workers)
-
-        with torch.no_grad():
-            for state, _ in dl:
-                comparison.extend(self.next_state_comparator(state).cpu().numpy())
 
         return comparison
 
@@ -231,25 +261,6 @@ class Evaluator():
                 print(f"Epoch: {ep + 1}, loss: {np.mean(errs)}")
 
         self.state_comparator_trained = True
-
-    def train_next_state_comparator(self, epochs=10, batch_size=64, lr=1e-3, negative_samples=10, sparse_state=False, verbose=False):
-        dl = DataLoader(NSCSet(states=self.states, actions=self.actions, dones=self.dones, num_actions=self.num_actions,
-                               negative_samples=negative_samples, sparse_state=sparse_state),
-                        batch_size=batch_size, drop_last=True, shuffle=True, num_workers=self.workers)
-        optimizer = Adam(self.next_state_comparator.parameters(), lr=lr)
-        loss = nn.BCELoss()
-
-        if verbose:
-            print(f"Inital loss:", evaluate(self.next_state_comparator, dl, loss))
-
-        for ep in tqdm(range(epochs), desc="Training Next State Comparator"):
-            errs = update(self.next_state_comparator, dl, loss, optimizer)
-
-            if verbose:
-                print(f"Epoch: {ep + 1}, loss: {np.mean(errs)}")
-
-        self.next_state_comparator_trained = True
-
 
 
 

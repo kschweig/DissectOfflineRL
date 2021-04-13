@@ -40,12 +40,15 @@ class VCSet(Dataset):
 
 class SCSet(Dataset):
 
-    def __init__(self, states, negative_samples=10, sparse_state=False):
+    def __init__(self, states, negative_samples=10, sparse_state=False, treshold=0.95):
         super(SCSet, self).__init__()
+
+        assert treshold >=-1 and treshold <= 1, f"treshold parameter must be in [-1,1] but is {treshold}."
 
         self.states = states
         self.negative_samples = 1 - (1 / (negative_samples + 1)) if negative_samples >= 0 else -1
         self.sparse_state = sparse_state
+        self.treshold = treshold
         self.rng = np.random.default_rng(seed=42)
 
     def __len__(self):
@@ -60,7 +63,7 @@ class SCSet(Dataset):
                     idx = self.rng.integers(self.__len__())
                     if idx == item:
                         continue
-                    equal = cosine_similarity(self.states[item], self.states[idx]) > 0.95
+                    equal = cosine_similarity(self.states[item], self.states[idx]) > self.treshold
             else:
                 idx = item
                 while idx == item:
@@ -71,62 +74,37 @@ class SCSet(Dataset):
         return np.concatenate((self.states[item], self.states[item])), np.ones((1), dtype=np.float32)
 
 
-class StartSet(Dataset):
+class StateSet(Dataset):
 
-    def __init__(self, states, dones, subsample=1):
-        super(StartSet, self).__init__()
+    def __init__(self, states, dones, starts=True, compare_with=1):
+        super(StateSet, self).__init__()
 
-        assert subsample >= 0 and subsample <= 1, f"subsampling must be in [0,1], is {subsample}"
+        assert compare_with >= 1 and isinstance(compare_with, int), f"compare_with must be positive integer, is {compare_with} type={type(compare_with)}"
 
-        self.states = []
-        self.dones = dones
-        self.subsample = subsample
+        # dones are used to indicate starting state, therefore shifted!
+        self.dones = np.ones_like(dones)
+        self.dones[1:] = dones[:-1]
+        self.rng = np.random.default_rng()
+        self.compare_with = compare_with
 
-        self.states = states[np.where(dones == 1)[0]]
+        if starts:
+            self.states = states[np.where(dones == 1)[0]]
+        else:
+            self.states = states
 
-    def __len__(self):
-        return int(len(self.states)**2 * self.subsample)
-
-    def __getitem__(self, item):
-        length = int(np.sqrt(self.__len__() / self.subsample))
-        return np.concatenate((self.states[item // length], self.states[item % length]))
-
-
-class NSCSet(Dataset):
-
-    def __init__(self, states, actions, dones, num_actions, negative_samples=10, sparse_state=False):
-        super(NSCSet, self).__init__()
-
-        self.states = states
-        self.actions = actions
-        self.dones = dones
-        self.num_actions = num_actions
-        self.negative_samples = 1 - (1 / (negative_samples + 1)) if negative_samples >= 0 else -1
-        self.sparse_state = sparse_state
-        self.rng = np.random.default_rng(seed=42)
+        print(self.__len__())
 
     def __len__(self):
-        return len(self.states) - 1
+        return len(self.states) * self.compare_with
 
     def __getitem__(self, item):
-
-        action = np.zeros((self.num_actions))
-        action[self.actions[item]] = 1
-
-        if self.rng.random() < self.negative_samples or self.negative_samples < 0:
-            if self.sparse_state:
-                equal = True
-                while equal:
-                    idx = self.rng.integers(self.__len__())
-                    if idx == (item + 1):
-                        continue
-                    equal = cosine_similarity(self.states[item + 1], self.states[idx]) > 0.95
+        item = int(item // self.compare_with)
+        # find fitting index
+        while True:
+            idx = self.rng.integers(len(self.states))
+            if idx == item:
+                continue
             else:
-                idx = item + 1
-                while idx == (item + 1):
-                    idx = self.rng.integers(self.__len__())
-            return np.concatenate((self.states[item], action, self.states[idx] * self.dones[idx]), dtype=np.float32), \
-                   np.zeros((1), dtype=np.float32)
+                break
 
-        return np.concatenate((self.states[item], action, self.states[item+1] * self.dones[item+1]), dtype=np.float32), \
-               np.ones((1), dtype=np.float32)
+        return np.concatenate((self.states[item], self.states[idx]))
