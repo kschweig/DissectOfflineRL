@@ -38,7 +38,7 @@ class ReplayBuffer():
         self.idx = (self.idx + 1) % self.buffer_size
         self.current_size = min(self.current_size + 1, self.buffer_size)
 
-    def sample(self, minimum=None, maximum=None, use_probas=False):
+    def sample(self, minimum=None, maximum=None, use_probas=False, use_remaining_reward=False):
 
         # we can set custom min/max to e.g. iterate over the dataset
         if minimum != None and maximum != None:
@@ -52,10 +52,15 @@ class ReplayBuffer():
         else:
             ind = self.rng.choice(ind, size=self.batch_size, replace=False)
 
+        if use_remaining_reward:
+            reward = self.remaining_reward[ind]
+        else:
+            reward = self.reward[ind]
+
         return (torch.FloatTensor(self.state[ind]).to(self.device),
                 torch.LongTensor(self.action[ind]).to(self.device),
                 torch.FloatTensor(self.next_state[ind]).to(self.device),
-                torch.FloatTensor(self.reward[ind]).to(self.device),
+                torch.FloatTensor(reward).to(self.device),
                 torch.FloatTensor(self.not_done[ind]).to(self.device)
                 )
 
@@ -88,6 +93,51 @@ class ReplayBuffer():
     #####################################
     # Special functions for experiments #
     #####################################
+
+    def calc_remaining_reward(self):
+        self.remaining_reward = np.zeros_like(self.reward)
+
+        # calculate total reward per episode
+        total_rewards = []
+        reward = 0
+        for i in range(len(self.reward)):
+            reward += self.reward[i]
+            if (not self.not_done[i]) or i == (len(self.reward) - 1):
+                total_rewards.append(reward)
+                reward = 0
+        # calculate remaining reward until end of episode
+        idx = 0
+        reward = total_rewards[idx]
+        for i in range(len(self.reward)):
+            self.remaining_reward[i] = reward
+            reward -= self.reward[i]
+            if not self.not_done[i] and i < (len(self.reward) - 1):
+                idx += 1
+                reward = total_rewards[idx]
+
+    def calc_reward_probas(self):
+        # calculate total reward per episode
+        total_rewards = []
+        reward, min_reward = 0, np.min(self.reward)
+        rewards = [r + min_reward for r in self.reward]
+        for i in range(len(rewards)):
+            reward += rewards[i]
+            if not self.not_done[i] or i == len(rewards) - 1:
+                total_rewards.append(reward)
+                reward = 0
+
+        # otherwise not every episode has a non-zero-probability to be sampled
+        #total_rewards = [tr + 1 for tr in total_rewards]
+
+        # calculate sampling probabilities until end of episode
+        idx = 0
+        for i in range(len(rewards)):
+            self.probas[i] = total_rewards[idx]
+            if not self.not_done[i]:
+                idx += 1
+
+        total = np.sum(self.probas)
+        self.probas = [p / total for p in self.probas]
 
     def calc_density(self):
         self.probas = []

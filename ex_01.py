@@ -13,7 +13,7 @@ Test Random behavioural policy
 # project parameters
 envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0']
 discounts = [0.9, 0.99, 0.95]
-agent_types = ["DQN"]
+agent_types = ["SQN"]
 #agent_types = ["BC", "SAC", "BCQ", "DQN", "QRDQN"]
 multiple_runs = 2
 # experiment parameters
@@ -28,6 +28,7 @@ batch_size = 128
 
 def train(args):
     envid, discount = args
+    """
     train_online(experiment=experiment, agent_type=behavioral, discount=discount, envid=envid,
                  transitions=transitions, buffer_size=50000,
                  run=1, seed=seed)
@@ -36,8 +37,8 @@ def train(args):
     for agent in agent_types:
         for run in range(1, multiple_runs + 1):
             train_offline(experiment=experiment, envid=envid, agent_type=agent, discount=discount,
-                          transitions=transitions, batch_size=batch_size, use_run=1, run=run, seed=seed+run)
-    """
+                          transitions=transitions, batch_size=batch_size, use_run=1, run=run, seed=seed+run, use_remaining_reward=True)
+
 
 def assess_ds(args):
     envid, use_run = args
@@ -48,10 +49,10 @@ def assess_ds(args):
     eval = Evaluator(buffer.state, buffer.action, buffer.reward, np.invert(buffer.not_done))
     print(envid, " Rewards:", eval.get_rewards())
     print(envid, " Episode Lengths:", eval.get_episode_lengths())
-    #eval.train_behavior_policy(batch_size=256, epochs=2)
-    #print(envid," Behavioral Entropy:", eval.get_bc_entropy())
-    #eval.train_value_critic(batch_size=256, epochs=3, lr=1e-3, horizon=500, verbose=True)
-    #print(envid," Behavioral Value:", eval.get_value_estimate())
+    eval.train_behavior_policy(batch_size=256, epochs=2)
+    print(envid," Behavioral Entropy:", eval.get_bc_entropy())
+    eval.train_value_critic(batch_size=256, epochs=5, lr=1e-2, verbose=True)
+    print(envid," Behavioral Value:", eval.get_value_estimate())
     eval.train_state_comparator(batch_size=256, epochs=2)
 
     #print("same states")
@@ -70,7 +71,8 @@ if __name__ == '__main__':
     #with Pool(len(envs), maxtasksperchild=1) as p:
         #p.map(train, zip(envs,discounts))
         #p.map(assess_ds, zip(envs, [1]*3))
-
-    assess_ds((envs[0], 1))
+    train((envs[2], 1))
+    #assess_ds((envs[0], 1))
     #assess_ds((envs[1], 1))
     #assess_ds((envs[2], 1))
+

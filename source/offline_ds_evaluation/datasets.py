@@ -26,15 +26,34 @@ class VCSet(Dataset):
 
         self.states = states
         self.actions = actions
-        self.rewards = rewards
+        self.rewards = np.zeros_like(rewards)
+
+        # calculate total reward per episode
+        self.total_rewards = []
+        reward = 0
+        for i in range(len(rewards)):
+            reward += rewards[i]
+            if dones[i] or i == len(rewards) - 1:
+                self.total_rewards.append(reward)
+                reward = 0
+
+        # calculate remaining reward until end of episode
+        idx = 0
+        reward = self.total_rewards[idx]
+        for i in range(len(rewards)):
+            self.rewards[i] = reward
+            reward -= rewards[i]
+            if dones[i]:
+                idx += 1
+                reward = self.total_rewards[idx]
+
         self.not_dones = np.invert(dones)
 
     def __len__(self):
         return len(self.states) - 1
 
     def __getitem__(self, item):
-        return torch.FloatTensor(self.states[item]), torch.FloatTensor(self.states[item+1]), \
-               torch.LongTensor(self.actions[item]), torch.LongTensor(self.actions[item+1]), \
+        return torch.FloatTensor(self.states[item]), torch.LongTensor(self.actions[item]), \
                torch.FloatTensor(self.rewards[item]), torch.FloatTensor(self.not_dones[item])
 
 

@@ -108,7 +108,7 @@ class Evaluator():
                         batch_size=512, drop_last=False, shuffle=False, num_workers=self.workers)
 
         with torch.no_grad():
-            for state, _, action, _, _, _ in dl:
+            for state, action, _, _ in dl:
                 values.extend(self.value_critic(state).gather(1, action).cpu().numpy())
 
         # de-normalize values
@@ -144,33 +144,52 @@ class Evaluator():
 
         return np.min(comparison), np.mean(comparison), np.max(comparison)
 
-    def get_episode_intersections(self, treshold=0.98, max_batch_size=512):
+    def get_episode_intersections(self, threshold=0.98, max_batch_size=512):
         if not self.state_comparator_trained:
             print(BColors.WARNING + "Attention, state comparator was not trained before calling get_episode_intersections!" + BColors.ENDC)
 
         intersections, inter, first_idx = list(), 0, 0
+        free_path_lengths, free_path_length = list(), 0
 
-        for i, done in tqdm(enumerate(self.dones), desc="Calculate Episode Intersections", total=len(self.dones)):
+        for i, done in tqdm(enumerate(self.dones), desc="Search for Episode Intersections", total=len(self.dones)):
+            free_path_length += 1
+
             if i == first_idx:
                 continue
 
-            # compare current state to every state in the episode before
-            current_state = self.states[i].reshape(1,-1)
-            compare_states = self.states[first_idx:i]
-            compare_states = np.concatenate((compare_states, np.repeat(current_state, i-first_idx, axis=0)), axis=1)
-            compare_states = torch.FloatTensor(compare_states)
-            pred = self.state_comparator(compare_states).detach().cpu().numpy()
+            # compare current state to every state in the episode before, now batch-safe
+            batch_inter = 0
+            for mbs in range(((i-first_idx) // max_batch_size) + 1):
+                # get indixes for correct batch sizes
+                start_idx = first_idx + mbs * max_batch_size
+                end_idx = min(first_idx + (mbs + 1) * max_batch_size, i)
 
-            # Increment iterations if similarity to at least one prior state is greater than 1.
-            # Not using the total number of states as that would double-count those intersections.
-            inter += len(np.where(pred > treshold)[0]) > 0
+                current_state = self.states[i].reshape(1,-1)
+                compare_states = self.states[start_idx:end_idx]
+                compare_states = np.concatenate((compare_states, np.repeat(current_state, end_idx - start_idx, axis=0)),
+                                                axis=1)
+                compare_states = torch.FloatTensor(compare_states)
+                pred = self.state_comparator(compare_states).detach().cpu().numpy()
+
+                # Increment iterations if similarity to at least one prior state is greater than 1.
+                # Not using the total number of states as that would double-count those intersections.
+                batch_inter += len(np.where(pred > threshold)[0]) > 0
+
+            if batch_inter > 0:
+                inter += 1
+                free_path_lengths.append(free_path_length)
+                free_path_length = 0
 
             if done:
                 intersections.append(inter)
                 inter = 0
                 first_idx = i
+                if free_path_length > 0:
+                    free_path_lengths.append(free_path_length)
+                free_path_length = 0
 
-        return np.min(intersections), np.mean(intersections), np.max(intersections)
+        return np.min(intersections), np.mean(intersections), np.max(intersections), \
+               np.min(free_path_lengths), np.mean(free_path_lengths), np.max(free_path_lengths)
 
     def get_state_determinism(self):
         if not self.state_comparator_trained:
@@ -209,28 +228,26 @@ class Evaluator():
 
         self.behavioral_trained = True
 
-    def train_value_critic(self, epochs=10, batch_size=64, lr=1e-3, horizon=100, verbose=False):
+    def train_value_critic(self, epochs=10, batch_size=64, lr=1e-3, verbose=False):
         if not self.behavioral_trained:
             print(BColors.WARNING + "Attention, behavioral policy was not trained before calling train_value_critic!" + BColors.ENDC)
 
         dl = DataLoader(VCSet(states=self.states, actions=self.actions, rewards=self.rewards, dones=self.dones),
                         batch_size=batch_size, drop_last=True, shuffle=True, num_workers=self.workers)
         optimizer = Adam(self.value_critic.parameters(), lr=lr)
-        loss = nn.MSELoss()
+        loss = nn.SmoothL1Loss()
 
         for ep in tqdm(range(epochs), desc="Training Behavioral Critic"):
             losses = []
 
-            for state, next_state, action, next_action, reward, not_done in dl:
-                # Compute the target Q value by using the observed data
-                with torch.no_grad():
-                    target_Q = reward + not_done * np.exp(-1/horizon) * self.value_critic.forward(next_state).gather(1, next_action)
+            # reward is cumulated reward from this state onwards, thus exactly the q-value mc sample of the episode
+            for state, action, reward, not_done in dl:
 
                 # Get current Q estimate
                 current_Q = self.value_critic.forward(state).gather(1, action)
 
                 # Compute Q loss (Huber loss)
-                Q_loss = loss(current_Q, target_Q)
+                Q_loss = loss(current_Q, reward)
 
                 # Optimize the Q
                 optimizer.zero_grad()
@@ -240,7 +257,7 @@ class Evaluator():
                 losses.append(Q_loss.item())
 
             if verbose:
-                print("Episode", ep+1, "TD-error:", np.mean(losses))
+                print("Episode", ep+1, "Q-error:", np.mean(losses))
 
         self.value_critic_trained = True
 
