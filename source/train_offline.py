@@ -35,7 +35,7 @@ def train_offline(experiment, envid, agent_type="DQN", discount=0.95, transition
     # experiment specific #
     #######################
 
-    if use_remaining_reward: buffer.calc_remaining_reward()
+    if use_remaining_reward: buffer.calc_remaining_reward(discount=discount)
     if use_reward_scaling: buffer.calc_reward_probas()
     if use_subset: buffer.subset(lower, upper)
     if use_sim: buffer.calc_sim()

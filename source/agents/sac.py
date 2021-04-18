@@ -144,7 +144,6 @@ class SAC(Agent):
         # compute alpha loss
         with torch.no_grad():
             log_action_probs = F.log_softmax(self.actor.forward(state), dim=1)
-            action_probs = log_action_probs.exp()
 
         alpha_loss = -self.alpha * (log_action_probs + self.target_entropy)
         alpha_loss = alpha_loss.sum(dim=1).mean()

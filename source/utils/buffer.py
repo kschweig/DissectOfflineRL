@@ -94,26 +94,16 @@ class ReplayBuffer():
     # Special functions for experiments #
     #####################################
 
-    def calc_remaining_reward(self):
+    def calc_remaining_reward(self, discount=1):
         self.remaining_reward = np.zeros_like(self.reward)
 
-        # calculate total reward per episode
-        total_rewards = []
-        reward = 0
-        for i in range(len(self.reward)):
-            reward += self.reward[i]
-            if (not self.not_done[i]) or i == (len(self.reward) - 1):
-                total_rewards.append(reward)
-                reward = 0
-        # calculate remaining reward until end of episode
-        idx = 0
-        reward = total_rewards[idx]
-        for i in range(len(self.reward)):
-            self.remaining_reward[i] = reward
-            reward -= self.reward[i]
-            if not self.not_done[i] and i < (len(self.reward) - 1):
-                idx += 1
-                reward = total_rewards[idx]
+        cum_reward = 0
+        for i, d in reversed(list(enumerate(self.not_done))):
+            if not d:
+                cum_reward = 0
+            cum_reward = cum_reward + self.reward[i]
+            self.remaining_reward[i] = cum_reward
+            cum_reward *= discount
 
     def calc_reward_probas(self):
         # calculate total reward per episode

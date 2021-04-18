@@ -11,8 +11,8 @@ Test Batch Constrained Q-learning
 """
 
 # project parameters
-agent_types = ["SQN"]
-multiple_runs = 2
+agent_types = ["SQN-3"]
+multiple_runs = 1
 # experiment parameters
 experiment = 3
 seed = 42

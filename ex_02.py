@@ -8,9 +8,9 @@ Test Batch Constrained Q-learning
 
 # project parameters
 envs = ['MiniGrid-Empty-Random-6x6-v0', 'MiniGrid-Unlock-v0', 'MiniGrid-DistShift1-v0', 'MiniGrid-SimpleCrossingS9N1-v0']
-discounts = [0.95]*4
-agent_types = ["SQN"]
-multiple_runs = 2
+discounts = [0.9]*4
+agent_types = ["SQN-4"]
+multiple_runs = 1
 # experiment parameters
 experiment = 2
 seed = 42

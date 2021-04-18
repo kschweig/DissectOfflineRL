@@ -12,10 +12,10 @@ Test Random behavioural policy
 
 # project parameters
 envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0']
-discounts = [0.9, 0.99, 0.95]
-agent_types = ["SQN"]
+discounts = [0.9, 0.99, 1]
+agent_types = ["SCRR"]
 #agent_types = ["BC", "SAC", "BCQ", "DQN", "QRDQN"]
-multiple_runs = 2
+multiple_runs = 1
 # experiment parameters
 experiment = 1
 seed = 42
@@ -28,12 +28,12 @@ batch_size = 128
 
 def train(args):
     envid, discount = args
-    """
+
     train_online(experiment=experiment, agent_type=behavioral, discount=discount, envid=envid,
                  transitions=transitions, buffer_size=50000,
                  run=1, seed=seed)
 
-    """
+
     for agent in agent_types:
         for run in range(1, multiple_runs + 1):
             train_offline(experiment=experiment, envid=envid, agent_type=agent, discount=discount,
@@ -68,10 +68,10 @@ def assess_ds(args):
 
 
 if __name__ == '__main__':
-    #with Pool(len(envs), maxtasksperchild=1) as p:
-        #p.map(train, zip(envs,discounts))
+    with Pool(len(envs), maxtasksperchild=1) as p:
+        p.map(train, zip(envs,discounts))
         #p.map(assess_ds, zip(envs, [1]*3))
-    train((envs[2], 1))
+    #train((envs[0], 0.9))
     #assess_ds((envs[0], 1))
     #assess_ds((envs[1], 1))
     #assess_ds((envs[2], 1))
