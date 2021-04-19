@@ -105,6 +105,8 @@ class SCRR(Agent):
         # binary style
         #loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
 
+        writer.add_scalar("train/policy-loss", torch.mean(loss).detach().cpu().item(), self.iterations)
+
         # optimize policy
         self.p_optim.zero_grad()
         loss.backward()

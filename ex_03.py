@@ -11,7 +11,7 @@ Test Batch Constrained Q-learning
 """
 
 # project parameters
-agent_types = ["SQN-3"]
+agent_types = ["BC"]
 multiple_runs = 1
 # experiment parameters
 experiment = 3
@@ -36,14 +36,15 @@ def train(args):
             ag = train_offline(experiment=experiment, envid=envid, agent_type=agent, discount=discount,
                           transitions=transitions_offline, batch_size=batch_size, use_run=1, run=run, seed=seed+run, use_remaining_reward=True)
 
+            """
             # test on different version of env
             env = make_env('MiniGrid-DistShift2-v0')
             writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}", f"MiniGrid-DistShift2-v0_{agent}_run{run}"))
             all_rewards = []
             for i in range(10000):
                 all_rewards = evaluate(env, ag, writer, all_rewards, over_episodes=100)
-
+            """
 
 
 if __name__ == '__main__':
-    train(('MiniGrid-DistShift1-v0', 0.95))
+    train(('LunarLander-v2', 0.98))

@@ -12,8 +12,8 @@ Test Random behavioural policy
 
 # project parameters
 envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0']
-discounts = [0.9, 0.99, 1]
-agent_types = ["SCRR"]
+discounts = [0.9, 0.99, 0.95]
+agent_types = ["SQN"]
 #agent_types = ["BC", "SAC", "BCQ", "DQN", "QRDQN"]
 multiple_runs = 1
 # experiment parameters
@@ -28,11 +28,11 @@ batch_size = 128
 
 def train(args):
     envid, discount = args
-
+    """
     train_online(experiment=experiment, agent_type=behavioral, discount=discount, envid=envid,
                  transitions=transitions, buffer_size=50000,
                  run=1, seed=seed)
-
+    """
 
     for agent in agent_types:
         for run in range(1, multiple_runs + 1):
