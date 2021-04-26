@@ -64,7 +64,7 @@ class BehavioralCloning(Agent):
         loss = self.ce(pred_action, action.squeeze(1))
 
         # log cross entropy loss
-        writer.add_scalar("train/CE-loss", torch.mean(loss).detach().cpu().item(), self.iterations)
+        writer.add_scalar("train/policy-loss", torch.mean(loss).detach().cpu().item(), self.iterations)
 
         # Optimize the policy
         self.optimizer.zero_grad()

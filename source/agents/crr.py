@@ -88,7 +88,7 @@ class CRR(Agent):
         # set networks to train mode
         self.actor.train()
         self.Q.train()
-        self.target_Q.train()
+        self.Q_target.train()
 
         # log state distribution
         if self.iterations % 1000 == 0:
@@ -132,11 +132,12 @@ class CRR(Agent):
 
         # calculate advantage
         with torch.no_grad():
-            current_Qs = self.Q.evaluate(state)
+            self.Q.eval()
+            current_Qs = self.Q(state)
             advantage = current_Qs - current_Qs.mean(dim=1, keepdim=True)
 
         # predict action the behavioral policy would take
-        pred_action = self.actor.forward(state)
+        pred_action = self.actor(state)
         log_actions = F.log_softmax(pred_action, dim=1)
 
         # policy loss
