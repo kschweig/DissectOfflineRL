@@ -48,6 +48,9 @@ class QRDQN(Agent):
 
     def policy(self, state, eval=False):
 
+        # set networks to eval mode
+        self.Q.eval()
+
         if eval:
             eps = self.eval_eps
         else:
@@ -66,13 +69,17 @@ class QRDQN(Agent):
         # Sample replay buffer
         state, action, next_state, reward, not_done = buffer.sample(minimum, maximum, use_probas)
 
+        # set networks to train mode
+        self.Q.train()
+        self.Q_target.train()
+
         # log state distribution
         if self.iterations % 1000 == 0:
             writer.add_histogram("train/states", state, self.iterations)
 
         # Compute the target Q value
         with torch.no_grad():
-            target_Qs = self.Q_target.forward(next_state)
+            target_Qs = self.Q_target(next_state)
             action_indices = torch.argmax(target_Qs.mean(dim=2), dim=1, keepdim=True)
             target_Qs = target_Qs.gather(1, action_indices.unsqueeze(2).expand(-1, 1, self.quantiles))
             target_Qs = reward.unsqueeze(1) + not_done.unsqueeze(1) * self.discount * target_Qs

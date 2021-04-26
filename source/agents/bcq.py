@@ -51,6 +51,10 @@ class BCQ(Agent):
 
     def policy(self, state, eval=False):
 
+        # set networks to eval mode
+        self.actor.eval()
+        self.Q.eval()
+
         if eval:
             eps = self.eval_eps
         else:
@@ -77,13 +81,18 @@ class BCQ(Agent):
         # Sample replay buffer
         state, action, next_state, reward, not_done = buffer.sample(minimum, maximum, use_probas)
 
+        # set networks to train mode
+        self.actor.train()
+        self.Q.train()
+        self.Q_target.train()
+
         # log state distribution
         if self.iterations % 1000 == 0:
             writer.add_histogram("train/states", state, self.iterations)
 
         with torch.no_grad():
-            q_val = self.Q.forward(next_state)
-            actions = self.actor.forward(next_state)
+            q_val = self.Q(next_state)
+            actions = self.actor(next_state)
 
             sm = F.log_softmax(actions, dim=1).exp()
             sm = (sm / sm.max(1, keepdim=True)[0] > self.threshold).float()
@@ -93,8 +102,8 @@ class BCQ(Agent):
             target_Q = reward + not_done * self.discount * q_val.gather(1, next_action).reshape(-1, 1)
 
         # Get current Q estimate and actor decisions on actions
-        current_Q = self.Q.forward(state).gather(1, action)
-        actions = self.actor.forward(state)
+        current_Q = self.Q(state).gather(1, action)
+        actions = self.actor(state)
 
         # Compute Q loss (Huber loss)
         Q_loss = self.huber(current_Q, target_Q)

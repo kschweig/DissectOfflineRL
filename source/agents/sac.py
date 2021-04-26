@@ -62,6 +62,10 @@ class SAC(Agent):
 
     def policy(self, state, eval=False):
 
+        # set networks to eval mode
+        self.actor.eval()
+        self.Q1.eval()
+
         if eval:
             eps = self.eval_eps
         else:
@@ -73,8 +77,8 @@ class SAC(Agent):
                 state = torch.FloatTensor(state).to(self.device)
                 actions = self.actor.evaluate(state).cpu()
                 actions = F.softmax(actions, dim=1)
-                q1_vals = self.Q1.evaluate(state).cpu()
-                q2_vals = self.Q2.evaluate(state).cpu()
+                q1_vals = self.Q1(state).cpu()
+                q2_vals = self.Q2(state).cpu()
                 if eval == True:
                     action = actions.argmax().item()
                     return action, torch.min(q1_vals[0,action], q2_vals[0,action]), entropy(actions)
@@ -88,15 +92,22 @@ class SAC(Agent):
         # Sample replay buffer
         state, action, next_state, reward, not_done = buffer.sample(minimum, maximum, use_probas)
 
+        # set networks to train mode
+        self.Q1.train()
+        self.Q2.train()
+        self.Q1_target.train()
+        self.Q2_target.train()
+        self.actor.train()
+
         # log state distribution
         if self.iterations % 1000 == 0:
             writer.add_histogram("train/states", state, self.iterations)
 
         # Compute the target Q value
         with torch.no_grad():
-            target_Q = torch.min(self.Q1_target.forward(next_state), self.Q2_target.forward(next_state))
+            target_Q = torch.min(self.Q1_target(next_state), self.Q2_target(next_state))
 
-            log_action_probs = F.log_softmax(self.actor.forward(state), dim=1)
+            log_action_probs = F.log_softmax(self.actor(state), dim=1)
             action_probs = log_action_probs.exp()
 
             target_Q = action_probs * (target_Q - self.alpha * log_action_probs)
@@ -104,8 +115,9 @@ class SAC(Agent):
             target_Q = reward + not_done * self.discount * target_Q.sum(dim=1, keepdim=True)
 
         # Get current Q estimate
-        current_Q1 = self.Q1.forward(state).gather(1, action)
-        current_Q2 = self.Q2.forward(state).gather(1, action)
+
+        current_Q1 = self.Q1(state).gather(1, action)
+        current_Q2 = self.Q2(state).gather(1, action)
 
         # Compute Q loss (Huber loss)
         Q1_loss = self.huber(current_Q1, target_Q)
@@ -123,10 +135,10 @@ class SAC(Agent):
 
         # compute target Q for actor
         with torch.no_grad():
-            target_Q = torch.min(self.Q1_target.forward((next_state)), self.Q2_target.forward((next_state)))
+            target_Q = torch.min(self.Q1_target((next_state)), self.Q2_target((next_state)))
 
         # Compute policy loss
-        log_action_probs = F.log_softmax(self.actor.forward(state), dim=1)
+        log_action_probs = F.log_softmax(self.actor(state), dim=1)
         action_probs = log_action_probs.exp()
 
         policy_loss = action_probs * (self.alpha.detach() * log_action_probs - target_Q)
@@ -143,7 +155,7 @@ class SAC(Agent):
 
         # compute alpha loss
         with torch.no_grad():
-            log_action_probs = F.log_softmax(self.actor.forward(state), dim=1)
+            log_action_probs = F.log_softmax(self.actor(state), dim=1)
 
         alpha_loss = -self.alpha * (log_action_probs + self.target_entropy)
         alpha_loss = alpha_loss.sum(dim=1).mean()

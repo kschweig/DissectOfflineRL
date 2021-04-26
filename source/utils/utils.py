@@ -9,7 +9,6 @@ from ..agents.qrdqn import QRDQN
 from ..agents.bcq import BCQ
 from ..agents.sac import SAC
 from ..agents.sqn import SQN
-from ..agents.scrr import SCRR
 from ..agents.crr import CRR
 from ..agents.bc import BehavioralCloning
 from ..agents.random import Random
@@ -28,8 +27,6 @@ def get_agent(agent_type, obs_space, num_actions, discount, seed):
         return SAC(obs_space, num_actions, discount, seed=seed)
     elif agent_type == "SQN":
         return SQN(obs_space, num_actions, seed=seed)
-    elif agent_type == "SCRR":
-        return SCRR(obs_space, num_actions, seed=seed)
     elif agent_type == "CRR":
         return CRR(obs_space, num_actions, discount, quantiles=50, seed=seed)
     elif agent_type == "BC":

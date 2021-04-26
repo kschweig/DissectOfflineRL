@@ -68,11 +68,11 @@ def assess_ds(args):
 
 
 if __name__ == '__main__':
-    with Pool(len(envs), maxtasksperchild=1) as p:
-        p.map(train, zip(envs,discounts))
+    #with Pool(len(envs), maxtasksperchild=1) as p:
+        #p.map(train, zip(envs,discounts))
         #p.map(assess_ds, zip(envs, [1]*3))
     #train((envs[0], 0.9))
-    #assess_ds((envs[0], 1))
+    assess_ds((envs[0], 1))
     #assess_ds((envs[1], 1))
     #assess_ds((envs[2], 1))
 

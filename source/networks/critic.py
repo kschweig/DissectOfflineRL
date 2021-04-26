@@ -36,9 +36,6 @@ class Critic(nn.Module):
 
         return self.out(state)
 
-    def evaluate(self, state):
-        return self.forward(state)
-
 
 class RemCritic(Critic):
 
@@ -50,15 +47,13 @@ class RemCritic(Critic):
     def forward(self, state):
         state = super(RemCritic, self).forward(state)
 
-        alphas = torch.rand(self.heads).to(device=state.device)
-        alphas /= torch.sum(alphas)
+        if self.training:
+            alphas = torch.rand(self.heads).to(device=state.device)
+            alphas /= torch.sum(alphas)
 
-        return torch.sum(state.view(len(state), self.heads, self.num_actions) * alphas.view(1, -1, 1), dim=1)
-
-    def evaluate(self, state):
-        state = super(RemCritic, self).forward(state)
-
-        return torch.mean(state.view(len(state), self.heads, self.num_actions), dim=1)
+            return torch.sum(state.view(len(state), self.heads, self.num_actions) * alphas.view(1, -1, 1), dim=1)
+        else:
+            return torch.mean(state.view(len(state), self.heads, self.num_actions), dim=1)
 
 
 class QrCritic(Critic):
@@ -71,9 +66,11 @@ class QrCritic(Critic):
     def forward(self, state):
         state = super(QrCritic, self).forward(state)
 
-        return state.reshape(len(state), self.num_actions, self.quantiles)
+        state = state.reshape(len(state), self.num_actions, self.quantiles)
 
-    def evaluate(self, state):
-        state = self.forward(state)
-
+        if self.training:
+            return state
         return torch.mean(state, dim=2)
+
+
+

@@ -39,6 +39,9 @@ class SQN(Agent):
 
     def policy(self, state, eval=False):
 
+        # set network to eval mode
+        self.Q.eval()
+
         if eval:
             eps = self.eval_eps
         else:
@@ -48,7 +51,7 @@ class SQN(Agent):
         if self.rng.uniform(0, 1) > eps:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
-                q_val = self.Q.evaluate(state).cpu()
+                q_val = self.Q(state).cpu()
                 return q_val.argmax().item(), q_val.max().item(), entropy(q_val)
         else:
             return self.rng.integers(self.action_space), np.nan, np.nan
@@ -57,12 +60,15 @@ class SQN(Agent):
         # Sample replay buffer
         state, action, next_state, reward, not_done = buffer.sample(minimum, maximum, use_probas, use_remaining_reward=True)
 
+        # set network to train mode
+        self.Q.train()
+
         # log state distribution
         if self.iterations % 1000 == 0:
             writer.add_histogram("train/states", state, self.iterations)
 
         # Get current Q estimate
-        current_Q = self.Q.forward(state).gather(1, action)
+        current_Q = self.Q(state).gather(1, action)
 
         # Compute Q loss (Huber loss)
         Q_loss = self.huber(current_Q, reward)

@@ -38,11 +38,15 @@ class DQN(Agent):
         self.Q = Critic(self.obs_space, self.action_space, seed).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
 
+
         # Optimization
         self.lr = 1e-4
         self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
 
     def policy(self, state, eval=False):
+
+        # set networks to eval mode
+        self.Q.eval()
 
         if eval:
             eps = self.eval_eps
@@ -62,16 +66,20 @@ class DQN(Agent):
         # Sample replay buffer
         state, action, next_state, reward, not_done = buffer.sample(minimum, maximum, use_probas)
 
+        # set networks to train mode
+        self.Q.train()
+        self.Q_target.train()
+
         # log state distribution
         if self.iterations % 1000 == 0:
             writer.add_histogram("train/states", state, self.iterations)
 
         # Compute the target Q value
         with torch.no_grad():
-            target_Q = reward + not_done * self.discount * self.Q_target.forward(next_state).max(1, keepdim=True)[0]
+            target_Q = reward + not_done * self.discount * self.Q_target(next_state).max(1, keepdim=True)[0]
 
         # Get current Q estimate
-        current_Q = self.Q.forward(state).gather(1, action)
+        current_Q = self.Q(state).gather(1, action)
 
         # Compute Q loss (Huber loss)
         Q_loss = self.huber(current_Q, target_Q)

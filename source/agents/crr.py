@@ -58,6 +58,10 @@ class CRR(Agent):
 
     def policy(self, state, eval=False):
 
+        # set networks to eval mode
+        self.actor.eval()
+        self.Q.eval()
+
         if eval:
             eps = self.eval_eps
         else:
@@ -67,7 +71,7 @@ class CRR(Agent):
         if self.rng.uniform(0, 1) > eps:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
-                q_val = self.Q.evaluate(state).cpu()
+                q_val = self.Q(state).cpu()
 
                 actions = self.actor(state).cpu()
                 actions = F.softmax(actions, dim=1)
@@ -81,13 +85,18 @@ class CRR(Agent):
         # Sample replay buffer
         state, action, next_state, reward, not_done = buffer.sample(minimum, maximum, use_probas)
 
+        # set networks to train mode
+        self.actor.train()
+        self.Q.train()
+        self.target_Q.train()
+
         # log state distribution
         if self.iterations % 1000 == 0:
             writer.add_histogram("train/states", state, self.iterations)
 
         # Compute the target Q value
         with torch.no_grad():
-            target_Qs = self.Q_target.forward(next_state)
+            target_Qs = self.Q_target(next_state)
             action_indices = torch.argmax(target_Qs.mean(dim=2), dim=1, keepdim=True)
             target_Qs = target_Qs.gather(1, action_indices.unsqueeze(2).expand(-1, 1, self.quantiles))
             target_Qs = reward.unsqueeze(1) + not_done.unsqueeze(1) * self.discount * target_Qs

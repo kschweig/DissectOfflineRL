@@ -31,6 +31,3 @@ class Actor(nn.Module):
             state = state.unsqueeze(dim=0)
 
         return self.fnn(state)
-
-    def evaluate(self, state):
-        return self.forward(state)

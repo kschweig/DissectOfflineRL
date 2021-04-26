@@ -35,6 +35,9 @@ class BehavioralCloning(Agent):
         return "BC"
 
     def policy(self, state, eval=False):
+        # set networks to eval mode
+        self.actor.eval()
+
         with torch.no_grad():
             state = torch.FloatTensor(state).to(self.device)
             actions = self.actor(state).cpu()
@@ -47,12 +50,15 @@ class BehavioralCloning(Agent):
         # Sample replay buffer
         state, action, _, _, _ = buffer.sample(minimum, maximum, use_probas)
 
+        # set networks to train mode
+        self.actor.train()
+
         # log state distribution
         if self.iterations % 1000 == 0:
             writer.add_histogram("train/states", state, self.iterations)
 
         # predict action the behavioral policy would take
-        pred_action = self.actor.forward(state)
+        pred_action = self.actor(state)
 
         # calculate CE-loss
         loss = self.ce(pred_action, action.squeeze(1))
