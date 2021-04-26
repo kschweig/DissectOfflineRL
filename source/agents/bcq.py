@@ -65,8 +65,8 @@ class BCQ(Agent):
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
 
-                q_val = self.Q.evaluate(state).cpu()
-                actions = self.actor.evaluate(state).cpu()
+                q_val = self.Q(state).cpu()
+                actions = self.actor(state).cpu()
 
                 sm = F.log_softmax(actions, dim=1).exp()
                 sm = (sm / sm.max(1, keepdim=True)[0] > self.threshold).float()

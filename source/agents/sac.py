@@ -75,7 +75,7 @@ class SAC(Agent):
         if self.rng.uniform(0, 1) > eps:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
-                actions = self.actor.evaluate(state).cpu()
+                actions = self.actor(state).cpu()
                 actions = F.softmax(actions, dim=1)
                 q1_vals = self.Q1(state).cpu()
                 q2_vals = self.Q2(state).cpu()

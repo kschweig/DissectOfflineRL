@@ -60,7 +60,7 @@ class QRDQN(Agent):
         if self.rng.uniform(0, 1) > eps:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
-                q_val = self.Q.evaluate(state).cpu()
+                q_val = self.Q(state).cpu()
                 return q_val.argmax().item(), q_val.max().item(), entropy(q_val)
         else:
             return self.rng.integers(self.action_space), np.nan, np.nan
