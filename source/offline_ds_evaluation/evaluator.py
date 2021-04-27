@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from .networks import BC, SC, NSC
+from .networks import BC, SC
 from .training import update, evaluate
 from .datasets import BCSet, VCSet, SCSet, StateSet
 from .utils import entropy, BColors
@@ -48,11 +48,7 @@ class Evaluator():
         self.behavioral_trained = False
         self.behavioral = BC(num_state=self.states.shape[1], num_actions=self.num_actions, seed=self.seed)
 
-        # behavioral cloning network
-        self.value_critic_trained = False
-        self.value_critic = BC(num_state=self.states.shape[1], num_actions=self.num_actions, seed=self.seed)
-
-        # Network to assess whether something is the same state.
+        # State comparator
         self.state_comparator_trained = False
         self.state_comparator = SC(num_state=self.states.shape[1], seed=self.seed)
 
@@ -66,7 +62,19 @@ class Evaluator():
                 rewards.append(ep_reward)
                 ep_reward = 0
 
-        return np.min(rewards), np.mean(rewards), np.max(rewards)
+        return rewards
+
+    def get_sparsity(self):
+
+        sparsity, num_not_obtained = list(), list()
+
+        for i, done in enumerate(self.dones):
+            num_not_obtained.append(self.rewards[i] == 0)
+            if done:
+                sparsity.append(np.mean(num_not_obtained))
+                num_not_obtained = list()
+
+        return sparsity
 
     def get_episode_lengths(self):
 
@@ -78,7 +86,7 @@ class Evaluator():
                 lengths.append(ep_length)
                 ep_length = 0
 
-        return np.min(lengths), np.mean(lengths), np.max(lengths)
+        return lengths
 
     def get_bc_entropy(self):
         if not self.behavioral_trained:
@@ -95,26 +103,7 @@ class Evaluator():
         max_entropy = entropy(torch.ones((1, self.num_actions)) / self.num_actions)
         entropies = np.asarray(entropies) / max_entropy
 
-        return np.min(entropies), np.mean(entropies), np.max(entropies)
-
-    def get_value_estimate(self):
-        if not self.behavioral_trained:
-            print(BColors.WARNING + "Attention, behavioral policy was not trained before calling get_value_estimate!" + BColors.ENDC)
-        if not self.value_critic_trained:
-            print(BColors.WARNING + "Attention, value critic was not trained before calling get_value_estimate!" + BColors.ENDC)
-
-        values = []
-        dl = DataLoader(VCSet(states=self.states, actions=self.actions, rewards=self.rewards, dones=self.dones),
-                        batch_size=512, drop_last=False, shuffle=False, num_workers=self.workers)
-
-        with torch.no_grad():
-            for state, action, _, _ in dl:
-                values.extend(self.value_critic(state).gather(1, action).cpu().numpy())
-
-        # de-normalize values
-        values += np.max(self.rewards)
-
-        return np.min(values), np.mean(values), np.max(values)
+        return entropies
 
     def get_start_randomness(self, compare_with=1):
         if not self.state_comparator_trained:
@@ -220,46 +209,13 @@ class Evaluator():
         if verbose:
             print(f"Inital loss:", evaluate(self.behavioral, dl, loss))
 
-        for ep in tqdm(range(epochs), desc="Training Behavioral Policy"):
+        for ep in tqdm(range(epochs), desc="Training Behavioral Policy", disable = not verbose):
             errs = update(self.behavioral, dl, loss, optimizer)
 
             if verbose:
                 print(f"Epoch: {ep+1}, loss: {np.mean(errs)}")
 
         self.behavioral_trained = True
-
-    def train_value_critic(self, epochs=10, batch_size=64, lr=1e-3, verbose=False):
-        if not self.behavioral_trained:
-            print(BColors.WARNING + "Attention, behavioral policy was not trained before calling train_value_critic!" + BColors.ENDC)
-
-        dl = DataLoader(VCSet(states=self.states, actions=self.actions, rewards=self.rewards, dones=self.dones),
-                        batch_size=batch_size, drop_last=True, shuffle=True, num_workers=self.workers)
-        optimizer = Adam(self.value_critic.parameters(), lr=lr)
-        loss = nn.SmoothL1Loss()
-
-        for ep in tqdm(range(epochs), desc="Training Behavioral Critic"):
-            losses = []
-
-            # reward is cumulated reward from this state onwards, thus exactly the q-value mc sample of the episode
-            for state, action, reward, not_done in dl:
-
-                # Get current Q estimate
-                current_Q = self.value_critic.forward(state).gather(1, action)
-
-                # Compute Q loss (Huber loss)
-                Q_loss = loss(current_Q, reward)
-
-                # Optimize the Q
-                optimizer.zero_grad()
-                Q_loss.backward()
-                optimizer.step()
-
-                losses.append(Q_loss.item())
-
-            if verbose:
-                print("Episode", ep+1, "Q-error:", np.mean(losses))
-
-        self.value_critic_trained = True
 
     def train_state_comparator(self, epochs=10, batch_size=64, lr=1e-3, negative_samples=10, sparse_state=False, verbose=False):
 
@@ -271,7 +227,7 @@ class Evaluator():
         if verbose:
             print(f"Inital loss:", evaluate(self.state_comparator, dl, loss))
 
-        for ep in tqdm(range(epochs), desc="Training State Comparator"):
+        for ep in tqdm(range(epochs), desc="Training State Comparator", disable = not verbose):
             errs = update(self.state_comparator, dl, loss, optimizer)
 
             if verbose:
