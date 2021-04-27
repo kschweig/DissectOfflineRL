@@ -2,7 +2,7 @@ import numpy as np
 import gym
 import gym_minigrid
 import torch.nn.functional as F
-from .wrappers import FlatImgObsWrapper
+from .wrappers import FlatImgObsWrapper, RestrictMiniGridActionWrapper
 from ..agents.dqn import DQN
 from ..agents.rem import REM
 from ..agents.qrdqn import QRDQN
@@ -11,6 +11,7 @@ from ..agents.sac import SAC
 from ..agents.sqn import SQN
 from ..agents.crr import CRR
 from ..agents.bc import BehavioralCloning
+from ..agents.bve import BehavioralValueEstimation
 from ..agents.random import Random
 
 
@@ -31,6 +32,8 @@ def get_agent(agent_type, obs_space, num_actions, discount, seed):
         return CRR(obs_space, num_actions, discount, quantiles=50, seed=seed)
     elif agent_type == "BC":
         return BehavioralCloning(obs_space, num_actions, discount, seed=seed)
+    elif agent_type == "BVE":
+        return BehavioralValueEstimation(obs_space, num_actions, discount, seed=seed)
     elif agent_type == "Random":
         return Random(obs_space, num_actions, discount, seed=seed)
     else:
@@ -41,7 +44,7 @@ def get_agent(agent_type, obs_space, num_actions, discount, seed):
 def make_env(envid):
     env = gym.make(envid)
     if "MiniGrid" in envid:
-        env = FlatImgObsWrapper(env)
+        env = FlatImgObsWrapper(RestrictMiniGridActionWrapper(env))
     return env
 
 

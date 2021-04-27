@@ -1,4 +1,7 @@
 import gym
+import gym_minigrid
+from gym_minigrid.window import Window
+from source.utils.wrappers import FlatImgObsWrapper
 
 """
 CartPole-v1:
@@ -22,13 +25,15 @@ Solved is 200 points. Episode until touching the ground.
 """
 envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0', 'LunarLander-v2']
 
-env = gym.make(envs[3])
+#env = gym.make(envs[3])
+env = FlatImgObsWrapper(gym.make('MiniGrid-LavaGapS7-v0'))
 obs = env.reset()
-print(obs)
 print(env.observation_space.high)
 print(env.observation_space.low)
 print(env.action_space.n)
+window = Window(title="MiniGrid")
 for _ in range(100):
-    env.render()
+    img = env.render('rgb_array')
+    window.show_img(img)
     env.step(env.action_space.sample()) # take a random action
 env.close()
