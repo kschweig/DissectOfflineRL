@@ -13,6 +13,7 @@ from .utils.utils import get_agent, make_env
 
 def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1', transitions=200000, buffer_size=50000, run=1, seed=42):
 
+    # keep training parameters fixed, the experiment does not interfere here.
     batch_size = 32
     evaluate_every = 100
     mean_over = 100
@@ -44,6 +45,9 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
     done = True
     ep = 0
 
+    #####################################
+    # train agent
+    #####################################
     for iteration in tqdm(range(transitions), desc=f"Behavioral policy ({envid}), run {run}"):
         # Reset if environment is done
         if done:
@@ -68,8 +72,8 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
         next_state, reward, done, _ = env.step(action)
 
         # add to buffer
-        buffer.add(state, action, reward, done, next_state)
-        er_buffer.add(state, action, reward, done, next_state)
+        buffer.add(state, action, reward, done)
+        er_buffer.add(state, action, reward, done)
 
         # add reward, value and entropy of current step for means over episode
         ep_reward += reward
@@ -94,8 +98,9 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
     # free memory
     del er_buffer
 
-
+    #####################################
     # generate transitions from trained agent
+    #####################################
     done, rng, n_actions = True, np.random.default_rng(seed), env.action_space.n
     for _ in tqdm(range(transitions), desc=f"Evaluate final policy ({envid}), run {run}"):
         if done:
@@ -105,7 +110,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
 
         next_state, reward, done, _ = env.step(action)
 
-        final_policy_buffer.add(state, action, reward, done, next_state)
+        final_policy_buffer.add(state, action, reward, done)
 
         state = next_state
 
@@ -113,8 +118,9 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
     with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{run}_fully.pkl"), "wb") as f:
         pickle.dump(final_policy_buffer, f)
 
-
+    #####################################
     # generate random transitions
+    #####################################
     done, rng, n_actions  = True, np.random.default_rng(seed), env.action_space.n
     for _ in tqdm(range(transitions), desc=f"Evaluate random policy ({envid}), run {run}"):
         if done:
@@ -123,7 +129,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
         action = rng.integers(n_actions)
         next_state, reward, done, _ = env.step(action)
 
-        random_buffer.add(state, action, reward, done, next_state)
+        random_buffer.add(state, action, reward, done)
 
         state = next_state
 
