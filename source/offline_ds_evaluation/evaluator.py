@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from .networks import BC, SC
 from .training import update, evaluate
-from .datasets import BCSet, VCSet, SCSet, StateSet
+from .datasets import BCSet, SCSet, StateSet
 from .utils import entropy, BColors
 
 
