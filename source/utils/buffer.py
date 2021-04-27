@@ -57,7 +57,7 @@ class ReplayBuffer():
             return (torch.FloatTensor(self.state[ind]).to(self.device),
                     torch.LongTensor(self.action[ind]).to(self.device),
                     torch.FloatTensor(self.state[ind+1]).to(self.device),
-                    torch.FloatTensor(self.action[ind+1]).to(self.device),
+                    torch.LongTensor(self.action[ind+1]).to(self.device),
                     torch.FloatTensor(reward).to(self.device),
                     torch.FloatTensor(self.not_done[ind]).to(self.device)
                     )
