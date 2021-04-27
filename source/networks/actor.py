@@ -14,13 +14,17 @@ class Actor(nn.Module):
 
         self.fnn = nn.Sequential(
             nn.Linear(in_features=num_state, out_features=num_hidden),
-            nn.ReLU(),
+            nn.SELU(),
             nn.Linear(in_features=num_hidden, out_features=num_hidden),
-            nn.ReLU(),
+            nn.SELU(),
             nn.Linear(in_features=num_hidden, out_features=num_hidden),
-            nn.ReLU(),
+            nn.SELU(),
             nn.Linear(in_features=num_hidden, out_features=num_actions)
         )
+
+        for param in self.parameters():
+            if len(param.shape) == 2:
+                torch.nn.init.kaiming_normal_(param, mode='fan_in', nonlinearity='linear')
 
     def forward(self, state):
         if len(state.shape) == 1:

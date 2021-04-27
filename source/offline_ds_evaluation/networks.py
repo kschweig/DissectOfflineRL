@@ -15,12 +15,16 @@ class BaseNet(nn.Module, ABC):
 
         self.base = nn.Sequential(
             nn.Linear(in_features=num_state, out_features=self.num_hidden),
-            nn.ReLU(),
+            nn.SELU(),
             nn.Linear(in_features=self.num_hidden, out_features=self.num_hidden),
-            nn.ReLU(),
+            nn.SELU(),
             nn.Linear(in_features=self.num_hidden, out_features=self.num_hidden),
-            nn.ReLU()
+            nn.SELU()
         )
+
+        for param in self.parameters():
+            if len(param.shape) == 2:
+                torch.nn.init.kaiming_normal_(param, mode='fan_in', nonlinearity='linear')
 
     def forward(self, state):
         if len(state.shape) == 1:
