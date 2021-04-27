@@ -34,9 +34,6 @@ class SAC(Agent):
         # Number of training iterations
         self.iterations = 0
 
-        # After how many training steps 'snap' target to main network?
-        self.target_update_freq = 1
-
         # Explicit Policy
         self.actor = Actor(self.obs_space, self.action_space, seed).to(self.device)
         # Q-Networks
@@ -175,12 +172,11 @@ class SAC(Agent):
 
 
         self.iterations += 1
-        # Update target network by full copy every X iterations.
-        if self.iterations % self.target_update_freq == 0:
-            for target_param, param in zip(self.Q1_target.parameters(), self.Q1.parameters()):
-                target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
-            for target_param, param in zip(self.Q2_target.parameters(), self.Q2.parameters()):
-                target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
+        # Soft-Update target network
+        for target_param, param in zip(self.Q1_target.parameters(), self.Q1.parameters()):
+            target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
+        for target_param, param in zip(self.Q2_target.parameters(), self.Q2.parameters()):
+            target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
 
     def get_name(self) -> str:
         return "SAC"

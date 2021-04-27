@@ -33,7 +33,7 @@ class DQN(Agent):
         self.iterations = 0
 
         # After how many training steps 'snap' target to main network?
-        self.target_update_freq = 1
+        self.target_update_freq = 100
 
         # Q-Networks
         self.Q = Critic(self.obs_space, self.action_space, seed).to(self.device)
