@@ -12,9 +12,7 @@ def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discoun
                   use_run=1, run=1, seed=42,
                   use_subset=False, lower=None, upper=None,
                   use_progression=False, buffer_size=None,
-                  use_sim=False,
-                  use_density=False,
-                  use_remaining_reward=False, use_reward_scaling=False):
+                  use_remaining_reward=False):
 
     # over how many episodes do we take average and how much gradient updates to next
     mean_over = 100
@@ -36,10 +34,7 @@ def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discoun
     #######################
 
     if use_remaining_reward: buffer.calc_remaining_reward(discount=discount)
-    if use_reward_scaling: buffer.calc_reward_probas()
     if use_subset: buffer.subset(lower, upper)
-    if use_sim: buffer.calc_sim()
-    if use_density: buffer.calc_density()
 
     #######################
 
@@ -61,7 +56,7 @@ def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discoun
             minimum = None
             maximum = None
 
-        agent.train(buffer, writer, maximum, minimum, (use_density or use_sim or use_reward_scaling))
+        agent.train(buffer, writer, maximum, minimum)
 
         if (iter+1) % evaluate_every == 0:
             all_rewards = evaluate(env, agent, writer, all_rewards, over_episodes=mean_over)
