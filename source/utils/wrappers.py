@@ -16,7 +16,7 @@ class FlatImgObsWrapper(gym.core.ObservationWrapper):
         self.observation_space = spaces.Box(
             low=0,
             high=255,
-            shape=(obs_shape[0] * obs_shape[1], ),
+            shape=(obs_shape[0] * obs_shape[1] * 2, ),
             dtype='uint8'
         )
 
@@ -35,6 +35,9 @@ class RestrictMiniGridActionWrapper(gym.core.ActionWrapper):
         super(RestrictMiniGridActionWrapper, self).__init__(env)
 
         self.action_space = gym.spaces.Discrete(3)
+
+    def action(self, action):
+        return action
 
 
 class RewardAtEndWrapper(gym.core.RewardWrapper):
