@@ -105,6 +105,8 @@ class ReplayBuffer():
             self.remaining_reward[i] = cum_reward
             cum_reward *= discount
 
+    ### Not used anymore
+
     def calc_reward_probas(self):
         # calculate total reward per episode
         total_rewards = []

@@ -8,7 +8,7 @@ from .utils.evaluation import evaluate
 from .utils.utils import get_agent, make_env
 
 
-def train_offline(experiment, envid, agent_type="DQN", discount=0.95, transitions=200000, batch_size=128,
+def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discount=0.95, transitions=200000, batch_size=128,
                   use_run=1, run=1, seed=42,
                   use_subset=False, lower=None, upper=None,
                   use_progression=False, buffer_size=None,
@@ -25,7 +25,7 @@ def train_offline(experiment, envid, agent_type="DQN", discount=0.95, transition
     agent = get_agent(agent_type, obs_space, env.action_space.n, discount, seed)
 
     # load saved buffer
-    with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{use_run}.pkl"), "rb") as f:
+    with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{use_run}_{buffer_type}.pkl"), "rb") as f:
         buffer = pickle.load(f)
 
     # configure buffer
@@ -49,11 +49,11 @@ def train_offline(experiment, envid, agent_type="DQN", discount=0.95, transition
     buffer.set_seed(seed)
     torch.manual_seed(seed)
 
-    writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}", f"{envid}_{agent_type}_run{run}"))
+    writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}", f"{envid}_{buffer_type}_{agent_type}_run{run}"))
 
     all_rewards = []
 
-    for iter in tqdm(range(transitions), desc=f"{agent_type} ({envid}), run {run}"):
+    for iter in tqdm(range(transitions), desc=f"{agent_type} ({envid}) {buffer_type}, run {run}"):
         if use_progression:
             minimum = max(0, iter - buffer_size)
             maximum = max(batch_size, iter)
