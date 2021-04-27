@@ -15,18 +15,14 @@ class Critic(nn.Module):
 
         self.backbone = nn.Sequential(
             nn.Linear(in_features=num_state, out_features=num_hidden),
-            nn.SELU(),
+            nn.ReLU(),
             nn.Linear(in_features=num_hidden, out_features=num_hidden),
-            nn.SELU(),
+            nn.ReLU(),
             nn.Linear(in_features=num_hidden, out_features=num_hidden),
-            nn.SELU()
+            nn.ReLU()
         )
 
         self.out = nn.Linear(in_features=num_hidden, out_features=num_actions * n_estimates)
-
-        for param in self.parameters():
-            if len(param.shape) > 1:
-                torch.nn.init.kaiming_normal_(param, mode='fan_in', nonlinearity='linear')
 
     def forward(self, state):
         if len(state.shape) == 1:
