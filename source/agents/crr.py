@@ -94,6 +94,37 @@ class CRR(Agent):
         if self.iterations % 1000 == 0:
             writer.add_histogram("train/states", state, self.iterations)
 
+        ###################################
+        ### Policy update
+        ###################################
+
+        # calculate advantage
+        with torch.no_grad():
+            self.Q.eval()
+            current_Qs = self.Q(state)
+            advantage = current_Qs - current_Qs.mean(dim=1, keepdim=True)
+
+        # predict action the policy would take
+        pred_action = self.actor(state)
+        log_actions = F.log_softmax(pred_action, dim=1)
+
+        # policy loss
+        # exp style
+        #loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
+        # binary style
+        loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
+
+        writer.add_scalar("train/policy-loss", torch.mean(loss).detach().cpu().item(), self.iterations)
+
+        # optimize policy
+        self.p_optim.zero_grad()
+        loss.backward()
+        self.p_optim.step()
+
+        ###################################
+        ### Critic update
+        ###################################
+
         # Compute the target Q value
         with torch.no_grad():
             target_Qs = self.Q_target(next_state)
@@ -130,33 +161,10 @@ class CRR(Agent):
         writer.add_scalar("train/TD-error", torch.mean(huber_l).detach().cpu().item(), self.iterations)
         writer.add_scalar("train/quantile_loss", torch.mean(quantile_loss).detach().cpu().item(), self.iterations)
 
-        # calculate advantage
-        with torch.no_grad():
-            self.Q.eval()
-            current_Qs = self.Q(state)
-            advantage = current_Qs - current_Qs.mean(dim=1, keepdim=True)
-
-        # predict action the behavioral policy would take
-        pred_action = self.actor(state)
-        log_actions = F.log_softmax(pred_action, dim=1)
-
-        # policy loss
-        # exp style
-        loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
-        # binary style
-        # loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
-
-        writer.add_scalar("train/policy-loss", torch.mean(loss).detach().cpu().item(), self.iterations)
-
         # Optimize the Q
         self.optimizer.zero_grad()
         quantile_loss.backward()
         self.optimizer.step()
-
-        # optimize policy
-        self.p_optim.zero_grad()
-        loss.backward()
-        self.p_optim.step()
 
         self.iterations += 1
         # Update target network by full copy every X iterations.
