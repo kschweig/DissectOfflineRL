@@ -8,37 +8,37 @@ from ..agents.rem import REM
 from ..agents.qrdqn import QRDQN
 from ..agents.bcq import BCQ
 from ..agents.sac import SAC
-from ..agents.sqn import SQN
+from ..agents.evmcp import EVMCP
 from ..agents.crr import CRR
 from ..agents.bc import BehavioralCloning
 from ..agents.bve import BehavioralValueEstimation
 from ..agents.random import Random
 
 
-def get_agent(agent_type, obs_space, num_actions, discount, seed):
+def get_agent(agent_type, obs_space, num_actions, discount, lr, seed):
     if agent_type == "DQN":
-        return DQN(obs_space, num_actions, discount, seed=seed)
+        return DQN(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "REM":
-        return REM(obs_space, num_actions, discount, heads=200, seed=seed)
+        return REM(obs_space, num_actions, discount, lr, heads=200, seed=seed)
     elif agent_type == "QRDQN":
-        return QRDQN(obs_space, num_actions, discount, quantiles=50, seed=seed)
+        return QRDQN(obs_space, num_actions, discount, lr, quantiles=50, seed=seed)
     elif agent_type == "BCQ":
-        return BCQ(obs_space, num_actions, discount, seed=seed)
+        return BCQ(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "SAC":
-        return SAC(obs_space, num_actions, discount, seed=seed)
-    elif agent_type == "SQN":
-        return SQN(obs_space, num_actions, seed=seed)
+        return SAC(obs_space, num_actions, discount, lr, seed=seed)
+    elif agent_type == "EVMCP":
+        return EVMCP(obs_space, num_actions, lr, seed=seed)
     elif agent_type == "CRR":
-        return CRR(obs_space, num_actions, discount, quantiles=50, seed=seed)
+        return CRR(obs_space, num_actions, discount, lr, quantiles=50, seed=seed)
     elif agent_type == "BC":
-        return BehavioralCloning(obs_space, num_actions, discount, seed=seed)
+        return BehavioralCloning(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "BVE":
-        return BehavioralValueEstimation(obs_space, num_actions, discount, seed=seed)
+        return BehavioralValueEstimation(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "Random":
-        return Random(obs_space, num_actions, discount, seed=seed)
+        return Random(obs_space, num_actions, discount, lr, seed=seed)
     else:
         print(BColors.WARNING + "Attention, using random agent!" + BColors.ENDC)
-        return Random(obs_space, num_actions, discount, seed=seed)
+        return Random(obs_space, num_actions, discount, lr, seed=seed)
 
 
 def make_env(envid):

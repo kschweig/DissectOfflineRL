@@ -8,7 +8,8 @@ from .utils.evaluation import evaluate
 from .utils.utils import get_agent, make_env
 
 
-def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discount=0.95, transitions=200000, batch_size=128,
+def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discount=0.95, transitions=200000,
+                  batch_size=128, lr=1e-4,
                   use_run=1, run=1, seed=42,
                   use_subset=False, lower=None, upper=None,
                   use_progression=False, buffer_size=None,
@@ -20,7 +21,7 @@ def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discoun
 
     env = make_env(envid)
     obs_space = len(env.observation_space.high)
-    agent = get_agent(agent_type, obs_space, env.action_space.n, discount, seed)
+    agent = get_agent(agent_type, obs_space, env.action_space.n, discount, lr, seed)
 
     # load saved buffer
     with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{use_run}_{buffer_type}.pkl"), "rb") as f:

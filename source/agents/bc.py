@@ -15,8 +15,9 @@ class BehavioralCloning(Agent):
                  obs_space,
                  action_space,
                  discount,
+                 lr=1e-4,
                  seed=None):
-        super(BehavioralCloning, self).__init__(obs_space, action_space, discount, seed)
+        super(BehavioralCloning, self).__init__(obs_space, action_space, discount, lr, seed)
 
         # Number of training iterations
         self.iterations = 0
@@ -28,7 +29,6 @@ class BehavioralCloning(Agent):
         self.actor = Actor(obs_space, action_space, seed).to(self.device)
 
         # Optimization
-        self.lr = 0.001
         self.optimizer = torch.optim.Adam(params=self.actor.parameters(), lr=self.lr)
 
     def get_name(self) -> str:

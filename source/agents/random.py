@@ -10,8 +10,9 @@ class Random(Agent):
                  obs_space,
                  action_space,
                  discount,
+                 lr=1e-4,
                  seed=None):
-        super(Random, self).__init__(obs_space, action_space, discount, seed)
+        super(Random, self).__init__(obs_space, action_space, discount, lr, seed)
 
     def get_name(self) -> str:
         return "Random"

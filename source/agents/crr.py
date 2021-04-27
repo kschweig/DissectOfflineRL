@@ -17,9 +17,10 @@ class CRR(Agent):
                  obs_space,
                  action_space,
                  discount,
-                 quantiles = 50,
+                 lr=1e-4,
+                 quantiles=50,
                  seed=None):
-        super(CRR, self).__init__(obs_space, action_space, discount, seed)
+        super(CRR, self).__init__(obs_space, action_space, discount, lr, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
@@ -49,7 +50,6 @@ class CRR(Agent):
         self.huber = nn.SmoothL1Loss(reduction='none')
 
         # Optimization
-        self.lr = 1e-4
         self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
         self.p_optim = torch.optim.Adam(params=self.actor.parameters(), lr=self.lr)
 

@@ -9,13 +9,13 @@ from ..utils.evaluation import entropy
 from ..networks.critic import Critic
 
 
-class SQN(Agent):
+class EVMCP(Agent):
 
     def __init__(self,
                  obs_space,
                  action_space,
                  seed=None):
-        super(SQN, self).__init__(obs_space, action_space, 1, seed)
+        super(EVMCP, self).__init__(obs_space, action_space, 1, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
@@ -84,7 +84,7 @@ class SQN(Agent):
         self.iterations += 1
 
     def get_name(self) -> str:
-        return "SQN"
+        return "EVMCP"
 
     def determinancy(self):
         return round((1-max(self.slope * self.iterations + self.initial_eps, self.end_eps))*100, 2)

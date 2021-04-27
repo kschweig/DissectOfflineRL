@@ -8,10 +8,12 @@ class Agent(ABC):
                  obs_space,
                  action_space,
                  discount,
+                 lr,
                  seed=None):
         self.obs_space = obs_space
         self.action_space = action_space
         self.discount = discount
+        self.lr = lr
         self.rng = np.random.default_rng(seed=seed)
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"

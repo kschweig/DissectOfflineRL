@@ -14,9 +14,10 @@ class QRDQN(Agent):
                  obs_space,
                  action_space,
                  discount,
+                 lr=1e-4,
                  quantiles = 50,
                  seed=None):
-        super(QRDQN, self).__init__(obs_space, action_space, discount, seed)
+        super(QRDQN, self).__init__(obs_space, action_space, discount, lr, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
@@ -43,7 +44,6 @@ class QRDQN(Agent):
         self.huber = nn.SmoothL1Loss(reduction='none')
 
         # Optimization
-        self.lr = 1e-4
         self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
 
     def policy(self, state, eval=False):

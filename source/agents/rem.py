@@ -14,9 +14,10 @@ class REM(Agent):
                  obs_space,
                  action_space,
                  discount,
+                 lr=1e-4,
                  heads=200,
                  seed=None):
-        super(REM, self).__init__(obs_space, action_space, discount, seed)
+        super(REM, self).__init__(obs_space, action_space, discount, lr, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
@@ -39,7 +40,6 @@ class REM(Agent):
         self.Q_target = copy.deepcopy(self.Q)
 
         # Optimization
-        self.lr = 1e-4
         self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
 
     def policy(self, state, eval=False):

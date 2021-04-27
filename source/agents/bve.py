@@ -15,8 +15,9 @@ class BehavioralValueEstimation(Agent):
                  obs_space,
                  action_space,
                  discount,
+                 lr=1e-4,
                  seed=None):
-        super(BehavioralValueEstimation, self).__init__(obs_space, action_space, discount, seed)
+        super(BehavioralValueEstimation, self).__init__(obs_space, action_space, discount, lr, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
@@ -38,7 +39,6 @@ class BehavioralValueEstimation(Agent):
         self.Q = Critic(self.obs_space, self.action_space, seed).to(self.device)
 
         # Optimization
-        self.lr = 1e-4
         self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
 
     def policy(self, state, eval=False):

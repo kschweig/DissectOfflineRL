@@ -17,8 +17,9 @@ class SAC(Agent):
                  obs_space,
                  action_space,
                  discount,
+                 lr=1e-4,
                  seed=None):
-        super(SAC, self).__init__(obs_space, action_space, discount, seed)
+        super(SAC, self).__init__(obs_space, action_space, discount, lr, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
@@ -55,7 +56,6 @@ class SAC(Agent):
         self.tau = 0.005
 
         # Optimization
-        self.lr = 1e-4
         self.Q_optimizer = torch.optim.Adam(params=list(self.Q1.parameters()) + list(self.Q2.parameters()), lr=self.lr)
         self.actor_optimizer = torch.optim.Adam(params=self.actor.parameters(), lr=self.lr)
         self.alpha_optimizer = torch.optim.Adam(params=[self.log_alpha], lr=self.lr)

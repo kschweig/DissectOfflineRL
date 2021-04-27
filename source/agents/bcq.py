@@ -16,8 +16,9 @@ class BCQ(Agent):
                  obs_space,
                  action_space,
                  discount,
+                 lr=1e-4,
                  seed=None):
-        super(BCQ, self).__init__(obs_space, action_space, discount, seed)
+        super(BCQ, self).__init__(obs_space, action_space, discount, lr, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
@@ -46,7 +47,6 @@ class BCQ(Agent):
         self.actor = Actor(self.obs_space, self.action_space, seed).to(self.device)
 
         # Optimization
-        self.lr = 1e-4
         self.optimizer = torch.optim.Adam(params=list(self.Q.parameters())+list(self.actor.parameters()), lr=self.lr)
 
     def policy(self, state, eval=False):

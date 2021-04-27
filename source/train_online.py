@@ -11,10 +11,12 @@ from .utils.evaluation import evaluate
 from .utils.utils import get_agent, make_env
 
 
-def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1', transitions=200000, buffer_size=50000, run=1, seed=42):
+def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1', transitions=200000,
+                 buffer_size=50000, run=1, seed=42):
 
-    # keep training parameters fixed, the experiment does not interfere here.
+    # keep training parameters for online training fixed, the experiment does not interfere here.
     batch_size = 32
+    lr = 1e-4
     evaluate_every = 100
     mean_over = 100
     train_every = 1
@@ -26,7 +28,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
     eval_env = make_env(envid)
     obs_space = len(env.observation_space.high)
 
-    agent = get_agent(agent_type, obs_space, env.action_space.n, discount, seed)
+    agent = get_agent(agent_type, obs_space, env.action_space.n, discount, lr, seed)
 
     # two buffers, one for learning, one for storing all transitions!
     buffer = ReplayBuffer(obs_space, buffer_size, batch_size, seed=seed)
