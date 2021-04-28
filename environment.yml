@@ -13,10 +13,11 @@ dependencies:
   - tqdm
   - matplotlib
   - seaborn
-  - pytorch=1.8
+  - pytorch=1.8.1
   - torchvision
   - torchaudio
   - cudatoolkit=10.1
+  - tensorflow=2.4.1
   - jupyter
   - pip:
       - gym
