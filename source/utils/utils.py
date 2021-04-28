@@ -27,7 +27,7 @@ def get_agent(agent_type, obs_space, num_actions, discount, lr, seed):
     elif agent_type == "SAC":
         return SAC(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "EVMCP":
-        return EVMCP(obs_space, num_actions, lr, seed=seed)
+        return EVMCP(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "CRR":
         return CRR(obs_space, num_actions, discount, lr, quantiles=50, seed=seed)
     elif agent_type == "BC":

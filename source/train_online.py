@@ -22,7 +22,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
     train_every = 1
     train_start_iter = batch_size
 
-    writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}", f"{envid}_online_run{run}"))
+    writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}", f"{envid}", "online", f"{agent_type}", f"run{run}"))
 
     env = make_env(envid)
     eval_env = make_env(envid)

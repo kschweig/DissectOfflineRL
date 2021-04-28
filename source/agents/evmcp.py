@@ -14,14 +14,11 @@ class EVMCP(Agent):
     def __init__(self,
                  obs_space,
                  action_space,
+                 discount,
+                 lr,
                  seed=None):
-        super(EVMCP, self).__init__(obs_space, action_space, 1, seed)
+        super(EVMCP, self).__init__(obs_space, action_space, discount, lr, seed)
 
-        # epsilon decay
-        self.initial_eps = 1.0
-        self.end_eps = 1e-2
-        self.eps_decay_period = 1000
-        self.slope = (self.end_eps - self.initial_eps) / self.eps_decay_period
         self.eval_eps = 0.
 
         # loss function
@@ -34,7 +31,6 @@ class EVMCP(Agent):
         self.Q = Critic(self.obs_space, self.action_space, seed).to(self.device)
 
         # Optimization
-        self.lr = 1e-4
         self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
 
     def policy(self, state, eval=False):
@@ -42,13 +38,8 @@ class EVMCP(Agent):
         # set network to eval mode
         self.Q.eval()
 
-        if eval:
-            eps = self.eval_eps
-        else:
-            eps = max(self.slope * self.iterations + self.initial_eps, self.end_eps)
-
         # epsilon greedy policy
-        if self.rng.uniform(0, 1) > eps:
+        if self.rng.uniform(0, 1) > self.eval_eps:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
                 q_val = self.Q(state).cpu()

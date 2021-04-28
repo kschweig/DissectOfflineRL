@@ -85,11 +85,6 @@ class CRR(Agent):
         # Sample replay buffer
         state, action, next_state, reward, not_done = buffer.sample(minimum, maximum, use_probas)
 
-        # set networks to train mode
-        self.actor.train()
-        self.Q.train()
-        self.Q_target.train()
-
         # log state distribution
         if self.iterations % 1000 == 0:
             writer.add_histogram("train/states", state, self.iterations)
@@ -97,6 +92,11 @@ class CRR(Agent):
         ###################################
         ### Policy update
         ###################################
+
+        # set networks to train mode
+        self.actor.train()
+        self.Q.train()
+        self.Q_target.train()
 
         # calculate advantage
         with torch.no_grad():
@@ -110,9 +110,9 @@ class CRR(Agent):
 
         # policy loss
         # exp style
-        #loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
+        loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
         # binary style
-        loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
+        #loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
 
         writer.add_scalar("train/policy-loss", torch.mean(loss).detach().cpu().item(), self.iterations)
 
@@ -124,6 +124,11 @@ class CRR(Agent):
         ###################################
         ### Critic update
         ###################################
+
+        # set networks to train mode
+        self.actor.train()
+        self.Q.train()
+        self.Q_target.train()
 
         # Compute the target Q value
         with torch.no_grad():

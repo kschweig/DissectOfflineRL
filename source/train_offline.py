@@ -45,7 +45,7 @@ def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discoun
     buffer.set_seed(seed)
     torch.manual_seed(seed)
 
-    writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}", f"{envid}_{buffer_type}_{agent_type}_run{run}"))
+    writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}", f"{envid}", f"{buffer_type}", f"{agent_type}", f"run{run}"))
 
     all_rewards = []
 
