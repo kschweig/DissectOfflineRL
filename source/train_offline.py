@@ -8,7 +8,7 @@ from .utils.evaluation import evaluate
 from .utils.utils import get_agent, make_env
 
 
-def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discount=0.95, transitions=200000,
+def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discount=0.95, transitions=100000,
                   batch_size=128, lr=1e-4,
                   use_run=1, run=1, seed=42,
                   use_subset=False, lower=None, upper=None,
@@ -60,12 +60,7 @@ def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discoun
         agent.train(buffer, writer, maximum, minimum)
 
         if (iter+1) % evaluate_every == 0:
-            all_rewards = evaluate(env, agent, writer, all_rewards, over_episodes=mean_over)
+            evaluate(env, agent, writer, all_rewards, buffer.state[0], over_episodes=mean_over)
 
-    # mean rewards
-    mean_rewards = []
-    for i in range(1, len(all_rewards)):
-        from_ = max(0, i-mean_over)
-        mean_rewards.append(np.mean(all_rewards[from_:i]))
 
     return agent

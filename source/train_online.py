@@ -60,11 +60,14 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
                     warnings.simplefilter("ignore", category=RuntimeWarning)
                     writer.add_scalar("train/Reward (SMA)", np.mean(ep_rewards[-100:]), ep)
                     writer.add_scalar("train/Reward", ep_reward, ep)
-                    writer.add_scalar("train/Values", np.nanmean(values), ep)
+                    writer.add_scalar("train/Max-Action-Value (mean)", np.nanmean(action_values), ep)
+                    writer.add_scalar("train/Max-Action-Value (std)", np.nanmean(action_values), ep)
+                    writer.add_scalar("train/Action-Values (mean)", np.nanmean(values), ep)
+                    writer.add_scalar("train/Action-Values (std)", np.nanmean(values), ep)
                     writer.add_scalar("train/Entropy", np.nanmean(entropies), ep)
 
             state = env.reset()
-            ep_reward, values, entropies = 0, [], []
+            ep_reward, values, action_values, entropies = 0, [], [], []
             ep += 1
 
         # obtain action
@@ -79,7 +82,8 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
 
         # add reward, value and entropy of current step for means over episode
         ep_reward += reward
-        values.append(value)
+        values.append(value.numpy())
+        action_values.append(value.max().item())
         entropies.append(entropy)
 
         # now next state is the new state
@@ -103,7 +107,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
     #####################################
     # generate transitions from trained agent
     #####################################
-    done, rng, n_actions = True, np.random.default_rng(seed), env.action_space.n
+    done, n_actions = True, env.action_space.n
     for _ in tqdm(range(transitions), desc=f"Evaluate final policy ({envid}), run {run}"):
         if done:
             state = env.reset()

@@ -77,7 +77,7 @@ class CRR(Agent):
                 actions = F.softmax(actions, dim=1)
                 dist = Categorical(actions.unsqueeze(0))
 
-                return dist.sample().item(), q_val.max().item(), entropy(actions)
+                return dist.sample().item(), q_val, entropy(actions)
         else:
             return self.rng.integers(self.action_space), np.nan, np.nan
 

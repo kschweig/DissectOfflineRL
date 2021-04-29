@@ -68,7 +68,6 @@ class SAC(Agent):
         else:
             eps = max(self.slope * self.iterations + self.initial_eps, self.end_eps)
 
-        # epsilon greedy policy
         if self.rng.uniform(0, 1) > eps:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
@@ -76,12 +75,9 @@ class SAC(Agent):
                 actions = F.softmax(actions, dim=1)
                 q1_vals = self.Q1(state).cpu()
                 q2_vals = self.Q2(state).cpu()
-                if eval == True:
-                    action = actions.argmax().item()
-                    return action, torch.min(q1_vals[0,action], q2_vals[0,action]), entropy(actions)
-                else:
-                    dist = Categorical(actions.squeeze(0))
-                    return dist.sample().item(), np.nan, entropy(actions)
+
+                dist = Categorical(actions.squeeze(0))
+                return dist.sample().item(), torch.min(q1_vals, q2_vals), entropy(actions)
         else:
             return self.rng.integers(self.action_space), np.nan, np.nan
 
