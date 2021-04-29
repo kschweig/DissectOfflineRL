@@ -7,7 +7,11 @@ def entropy(values):
     return -np.sum(probs * np.log(probs), axis=1)
 
 def cosine_similarity(v1, v2):
-    return np.dot(v1, v2) / np.linalg.norm(v1) / np.linalg.norm(v2)
+    n1 = np.linalg.norm(v1)
+    n2 = np.linalg.norm(v2)
+    if n1*n2 == 0:
+        return 0
+    return np.dot(v1, v2) / n1 / n2
 
 class BColors:
     HEADER = '\033[95m'

@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -8,6 +9,7 @@ from .networks import BC, SC
 from .training import update, evaluate
 from .datasets import BCSet, SCSet, StateSet
 from .utils import entropy, BColors
+from .plotting import plot_histograms
 
 
 
@@ -52,12 +54,59 @@ class Evaluator():
         self.state_comparator_trained = False
         self.state_comparator = SC(num_state=self.states.shape[1], seed=self.seed)
 
+    def evaluate(self, output=os.path.join("results","test.csv"), epochs=10, batch_size=64, lr=1e-3,
+                 negative_samples=10, sparse_state=True, compare_with=2, verbose=False):
+
+        self.train_behavior_policy(epochs, batch_size, lr, verbose)
+        self.train_state_comparator(epochs, batch_size, lr, negative_samples, sparse_state, verbose)
+
+        rewards = self.get_rewards()
+        sparsity = self.get_sparsity()
+        ep_lengths = self.get_episode_lengths()
+        entropies = self.get_bc_entropy()
+
+        start_sim = self.get_start_randomness(compare_with)
+        state_sim = self.get_state_randomness(compare_with)
+
+        # get minimal similarity of states that are equal.
+        min_sim = np.min(self.test_state_compare(negative_samples=0))
+
+        intersections, free_path_lengths = self.get_episode_intersections(threshold=min_sim)
+
+        plot_histograms(output, rewards, ep_lengths, intersections, free_path_lengths, entropies, self.actions,
+                        sparsity, state_sim, start_sim)
+
+        print("-"*50)
+        print("Min / Mean / Max Reward: \t\t", f"{round(np.min(rewards), 2)} / {round(np.mean(rewards), 2)} "
+                                             f"/ {round(np.max(rewards), 2)}")
+        print("Min / Mean / Max Sparsity: \t", f"{round(np.min(sparsity), 2)} / "
+                                                   f"{round(np.mean(sparsity), 2)} "
+                                                   f"/ {round(np.max(sparsity), 2)}")
+        print("Min / Mean / Max Episode Length: \t", f"{round(np.min(ep_lengths), 2)} / "
+                                                   f"{round(np.mean(ep_lengths), 2)} "
+                                                   f"/ {round(np.max(ep_lengths), 2)}")
+        print("Min / Mean / Max Entropy: \t", f"{round(np.min(entropies), 2)} / {round(np.mean(entropies), 2)} "
+                                             f"/ {round(np.max(entropies), 2)}")
+        print("Min / Mean / Max State Similarity: \t", f"{round(np.min(state_sim), 2)} / "
+                                                   f"{round(np.mean(state_sim), 2)} "
+                                                   f"/ {round(np.max(state_sim), 2)}")
+        print("Min / Mean / Max Start Similarity: \t", f"{round(np.min(start_sim), 2)} / "
+                                                     f"{round(np.mean(start_sim), 2)} "
+                                                     f"/ {round(np.max(start_sim), 2)}")
+        print("Min / Mean / Max Intersections: \t\t", f"{round(np.min(intersections), 2)} / "
+                                                    f"{round(np.mean(intersections), 2)} "
+                                                    f"/ {round(np.max(intersections), 2)}")
+        print("Min / Mean / Max Free Path Length: \t\t", f"{round(np.min(free_path_lengths), 2)} / "
+                                                       f"{round(np.mean(free_path_lengths), 2)} "
+                                                       f"/ {round(np.max(free_path_lengths), 2)}")
+        print("-" * 50)
+
     def get_rewards(self):
 
         rewards, ep_reward = list(), 0
 
         for i, done in enumerate(self.dones):
-            ep_reward += self.rewards[i]
+            ep_reward += self.rewards[i].item()
             if done:
                 rewards.append(ep_reward)
                 ep_reward = 0
@@ -69,7 +118,7 @@ class Evaluator():
         sparsity, num_not_obtained = list(), list()
 
         for i, done in enumerate(self.dones):
-            num_not_obtained.append(self.rewards[i] == 0)
+            num_not_obtained.append(self.rewards[i].item() == 0)
             if done:
                 sparsity.append(np.mean(num_not_obtained))
                 num_not_obtained = list()
@@ -114,10 +163,10 @@ class Evaluator():
                         batch_size=512, drop_last=False, shuffle=False, num_workers=self.workers)
 
         with torch.no_grad():
-            for state in tqdm(dl):
+            for state in tqdm(dl, desc="Estimate Start Randomness"):
                 comparison.extend(self.state_comparator(state).cpu().numpy())
 
-        return np.min(comparison), np.mean(comparison), np.max(comparison)
+        return comparison
 
     def get_state_randomness(self, compare_with=1):
         if not self.state_comparator_trained:
@@ -128,10 +177,10 @@ class Evaluator():
                         batch_size=512, drop_last=False, shuffle=False, num_workers=self.workers)
 
         with torch.no_grad():
-            for state in tqdm(dl, desc="estimate state randomness"):
+            for state in tqdm(dl, desc="Estimate State Randomness"):
                 comparison.extend(self.state_comparator(state).cpu().numpy())
 
-        return np.min(comparison), np.mean(comparison), np.max(comparison)
+        return comparison
 
     def get_episode_intersections(self, threshold=0.98, max_batch_size=512):
         if not self.state_comparator_trained:
@@ -177,15 +226,9 @@ class Evaluator():
                     free_path_lengths.append(free_path_length)
                 free_path_length = 0
 
-        return np.min(intersections), np.mean(intersections), np.max(intersections), \
-               np.min(free_path_lengths), np.mean(free_path_lengths), np.max(free_path_lengths)
+        return intersections, free_path_lengths
 
-    def get_state_determinism(self):
-        if not self.state_comparator_trained:
-            print(BColors.WARNING + "Attention, next state comparator was not trained before calling get_state_compare!" + BColors.ENDC)
-        pass
-
-    def test_state_compare(self, negative_samples=0, sparse_state=False):
+    def test_state_compare(self, negative_samples=0, sparse_state=True):
         if not self.state_comparator_trained:
             print(BColors.WARNING + "Attention, state comparator was not trained before calling test_state_compare!" + BColors.ENDC)
 
@@ -209,7 +252,7 @@ class Evaluator():
         if verbose:
             print(f"Inital loss:", evaluate(self.behavioral, dl, loss))
 
-        for ep in tqdm(range(epochs), desc="Training Behavioral Policy", disable = not verbose):
+        for ep in tqdm(range(epochs), desc="Training Behavioral Policy"):
             errs = update(self.behavioral, dl, loss, optimizer)
 
             if verbose:
@@ -217,7 +260,7 @@ class Evaluator():
 
         self.behavioral_trained = True
 
-    def train_state_comparator(self, epochs=10, batch_size=64, lr=1e-3, negative_samples=10, sparse_state=False, verbose=False):
+    def train_state_comparator(self, epochs=10, batch_size=64, lr=1e-3, negative_samples=10, sparse_state=True, verbose=False):
 
         dl = DataLoader(SCSet(states=self.states, negative_samples=negative_samples, sparse_state=sparse_state),
                         batch_size=batch_size, drop_last=True, shuffle=True, num_workers=self.workers)
@@ -227,13 +270,15 @@ class Evaluator():
         if verbose:
             print(f"Inital loss:", evaluate(self.state_comparator, dl, loss))
 
-        for ep in tqdm(range(epochs), desc="Training State Comparator", disable = not verbose):
+        for ep in tqdm(range(epochs), desc="Training State Comparator"):
             errs = update(self.state_comparator, dl, loss, optimizer)
 
             if verbose:
                 print(f"Epoch: {ep + 1}, loss: {np.mean(errs)}")
 
         self.state_comparator_trained = True
+
+
 
 
 

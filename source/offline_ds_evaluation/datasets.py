@@ -111,8 +111,6 @@ class StateSet(Dataset):
         else:
             self.states = states
 
-        print(self.__len__())
-
     def __len__(self):
         return len(self.states) * self.compare_with
 
