@@ -23,7 +23,8 @@ class FlatImgObsWrapper(gym.core.ObservationWrapper):
     def observation(self, obs):
         # division by 10 as the first dimension can hold up to 5 different colors
         # and the second channel can hold up to 10 different objects
-        return obs['image'][:,:,:2].flatten() / 10
+        # -0.5 to center
+        return (obs['image'][:,:,:2].flatten() / 10) - 0.5
 
 
 class RestrictMiniGridActionWrapper(gym.core.ActionWrapper):
