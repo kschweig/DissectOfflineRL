@@ -5,22 +5,25 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from .networks import BC, SC
+from .networks import BC
 from .training import update, evaluate
-from .datasets import BCSet, SCSet, StateSet
+from .datasets import BCSet
 from .utils import entropy, BColors
 from .plotting import plot_histograms
+from .latex import create_latex_table
 
 
 
 class Evaluator():
 
     def __init__(self,
+                 environment: str,
+                 buffer_type: str,
                  states:np.ndarray,
                  actions:np.ndarray,
                  rewards:np.ndarray,
                  dones:np.ndarray,
-                 workers=0,
+                 workers=4,
                  seed=42,
                  num_actions=None):
 
@@ -35,11 +38,17 @@ class Evaluator():
             dones = dones.reshape(-1, 1)
         assert len(dones.shape) == 2, f"Dones must be of dimension (ds_size, 1), were ({actions.shape})"
 
+        # task information
+        self.environment = environment
+        self.buffer_type = buffer_type
+
+        # Dataset
         self.states = states
         self.actions = actions
         self.rewards = rewards
         self.dones = dones
 
+        # auxiliary parameters
         self.workers = workers
         self.seed = seed
 
@@ -50,56 +59,55 @@ class Evaluator():
         self.behavioral_trained = False
         self.behavioral = BC(num_state=self.states.shape[1], num_actions=self.num_actions, seed=self.seed)
 
-        # State comparator
-        self.state_comparator_trained = False
-        self.state_comparator = SC(num_state=self.states.shape[1], seed=self.seed)
+    def evaluate(self, output=os.path.join("results", "ds_eval","test"), random_reward = 0, optimal_reward = 1,
+                 epochs=10, batch_size=64, lr=1e-3,
+                 subsample=1., verbose=False):
 
-    def evaluate(self, output=os.path.join("results","test.csv"), epochs=10, batch_size=64, lr=1e-3,
-                 negative_samples=10, sparse_state=True, compare_with=2, verbose=False):
+        assert 0 <= subsample <= 1, f"subsample must be in [0;1] but is {subsample}."
 
         self.train_behavior_policy(epochs, batch_size, lr, verbose)
-        self.train_state_comparator(epochs, batch_size, lr, negative_samples, sparse_state, verbose)
 
         rewards = self.get_rewards()
         sparsity = self.get_sparsity()
         ep_lengths = self.get_episode_lengths()
         entropies = self.get_bc_entropy()
 
-        start_sim = self.get_start_randomness(compare_with)
-        state_sim = self.get_state_randomness(compare_with)
+        # normalize states
+        self.states /= np.linalg.norm(self.states, axis=1, keepdims=True)
 
-        # get minimal similarity of states that are equal.
-        min_sim = np.min(self.test_state_compare(negative_samples=0))
+        unique_states_episode = self.get_unique_states_episode()
+        unique_states = self.get_unique_states()
 
-        intersections, free_path_lengths = self.get_episode_intersections(threshold=min_sim)
+        plot_histograms(output, rewards, ep_lengths, unique_states_episode, entropies, self.actions,
+                        sparsity)
 
-        plot_histograms(output, rewards, ep_lengths, intersections, free_path_lengths, entropies, self.actions,
-                        sparsity, state_sim, start_sim)
+        normalized_reward = self.get_normalized_rewards(rewards, random_reward, optimal_reward)
 
         print("-"*50)
         print("Min / Mean / Max Reward: \t\t", f"{round(np.min(rewards), 2)} / {round(np.mean(rewards), 2)} "
                                              f"/ {round(np.max(rewards), 2)}")
-        print("Min / Mean / Max Sparsity: \t", f"{round(np.min(sparsity), 2)} / "
-                                                   f"{round(np.mean(sparsity), 2)} "
-                                                   f"/ {round(np.max(sparsity), 2)}")
+        print("Min / Mean / Max Normalized Reward: \t\t", f"{round(np.min(normalized_reward), 2)} / "
+                                               f"{round(np.mean(normalized_reward), 2)} "
+                                               f"/ {round(np.max(normalized_reward), 2)}")
+        print("Min / Mean / Max Entropy: \t", f"{round(np.min(entropies), 2)} / {round(np.mean(entropies), 2)} "
+                                              f"/ {round(np.max(entropies), 2)}")
         print("Min / Mean / Max Episode Length: \t", f"{round(np.min(ep_lengths), 2)} / "
                                                    f"{round(np.mean(ep_lengths), 2)} "
                                                    f"/ {round(np.max(ep_lengths), 2)}")
-        print("Min / Mean / Max Entropy: \t", f"{round(np.min(entropies), 2)} / {round(np.mean(entropies), 2)} "
-                                             f"/ {round(np.max(entropies), 2)}")
-        print("Min / Mean / Max State Similarity: \t", f"{round(np.min(state_sim), 2)} / "
-                                                   f"{round(np.mean(state_sim), 2)} "
-                                                   f"/ {round(np.max(state_sim), 2)}")
-        print("Min / Mean / Max Start Similarity: \t", f"{round(np.min(start_sim), 2)} / "
-                                                     f"{round(np.mean(start_sim), 2)} "
-                                                     f"/ {round(np.max(start_sim), 2)}")
-        print("Min / Mean / Max Intersections: \t\t", f"{round(np.min(intersections), 2)} / "
-                                                    f"{round(np.mean(intersections), 2)} "
-                                                    f"/ {round(np.max(intersections), 2)}")
-        print("Min / Mean / Max Free Path Length: \t\t", f"{round(np.min(free_path_lengths), 2)} / "
-                                                       f"{round(np.mean(free_path_lengths), 2)} "
-                                                       f"/ {round(np.max(free_path_lengths), 2)}")
+        print("Min / Mean / Max Sparsity: \t", f"{round(np.min(sparsity), 2)} / "
+                                               f"{round(np.mean(sparsity), 2)} "
+                                               f"/ {round(np.max(sparsity), 2)}")
+        print("Min / Mean / Max Unique States per Episode: \t", f"{round(np.min(unique_states_episode), 2)} / "
+                                               f"{round(np.mean(unique_states_episode), 2)} "
+                                               f"/ {round(np.max(unique_states_episode), 2)}")
+        print("Share of unique states in dataset: \t", f"{round(unique_states, 5)}")
         print("-" * 50)
+
+        return [self.environment, self.buffer_type,
+                (np.mean(rewards), np.std(rewards)), (np.mean(normalized_reward), np.std(normalized_reward)),
+                (np.mean(entropies), np.std(entropies)),
+                (np.mean(ep_lengths), np.std(ep_lengths)), (np.mean(sparsity), np.std(sparsity)),
+                (np.mean(unique_states_episode), np.std(unique_states_episode)), unique_states]
 
     def get_rewards(self):
 
@@ -112,6 +120,12 @@ class Evaluator():
                 ep_reward = 0
 
         return rewards
+
+    def get_normalized_rewards(self, rewards, random_reward, optimal_reward):
+        normalized_reward = []
+        for reward in rewards:
+            normalized_reward.append((reward - random_reward) / (optimal_reward - random_reward))
+        return normalized_reward
 
     def get_sparsity(self):
 
@@ -154,93 +168,39 @@ class Evaluator():
 
         return entropies
 
-    def get_start_randomness(self, compare_with=1):
-        if not self.state_comparator_trained:
-            print(BColors.WARNING + "Attention, state comparator was not trained before calling get_start_randomness!" + BColors.ENDC)
-
-        comparison = []
-        dl = DataLoader(StateSet(states=self.states, dones=self.dones, starts=True, compare_with=compare_with),
-                        batch_size=512, drop_last=False, shuffle=False, num_workers=self.workers)
-
-        with torch.no_grad():
-            for state in tqdm(dl, desc="Estimate Start Randomness"):
-                comparison.extend(self.state_comparator(state).cpu().numpy())
-
-        return comparison
-
-    def get_state_randomness(self, compare_with=1):
-        if not self.state_comparator_trained:
-            print(BColors.WARNING + "Attention, state comparator was not trained before calling get_state_randomness!" + BColors.ENDC)
-
-        comparison = []
-        dl = DataLoader(StateSet(states=self.states, dones=self.dones, starts=False, compare_with=compare_with),
-                        batch_size=512, drop_last=False, shuffle=False, num_workers=self.workers)
-
-        with torch.no_grad():
-            for state in tqdm(dl, desc="Estimate State Randomness"):
-                comparison.extend(self.state_comparator(state).cpu().numpy())
-
-        return comparison
-
-    def get_episode_intersections(self, threshold=0.98, max_batch_size=512):
-        if not self.state_comparator_trained:
-            print(BColors.WARNING + "Attention, state comparator was not trained before calling get_episode_intersections!" + BColors.ENDC)
-
-        intersections, inter, first_idx = list(), 0, 0
-        free_path_lengths, free_path_length = list(), 0
-
-        for i, done in tqdm(enumerate(self.dones), desc="Search for Episode Intersections", total=len(self.dones)):
-            free_path_length += 1
-
-            if i == first_idx:
-                continue
-
-            # compare current state to every state in the episode before, now batch-safe
-            batch_inter = 0
-            for mbs in range(((i-first_idx) // max_batch_size) + 1):
-                # get indixes for correct batch sizes
-                start_idx = first_idx + mbs * max_batch_size
-                end_idx = min(first_idx + (mbs + 1) * max_batch_size, i)
-
-                current_state = self.states[i].reshape(1,-1)
-                compare_states = self.states[start_idx:end_idx]
-                compare_states = np.concatenate((compare_states, np.repeat(current_state, end_idx - start_idx, axis=0)),
-                                                axis=1)
-                compare_states = torch.FloatTensor(compare_states)
-                pred = self.state_comparator(compare_states).detach().cpu().numpy()
-
-                # Increment iterations if similarity to at least one prior state is greater than 1.
-                # Not using the total number of states as that would double-count those intersections.
-                batch_inter += len(np.where(pred > threshold)[0]) > 0
-
-            if batch_inter > 0:
-                inter += 1
-                free_path_lengths.append(free_path_length)
-                free_path_length = 0
-
+    def get_unique_states_episode(self, threshold=0.999):
+        unique_states_episode, unique = [], []
+        for i, done in tqdm(enumerate(self.dones),
+                            desc=f"Search for Unique States per Episode ({self.environment} @ {self.buffer_type})",
+                            total=len(self.dones)):
             if done:
-                intersections.append(inter)
-                inter = 0
-                first_idx = i
-                if free_path_length > 0:
-                    free_path_lengths.append(free_path_length)
-                free_path_length = 0
+                unique_states_episode.append(len(unique))
+                unique = []
 
-        return intersections, free_path_lengths
+            found = False
+            for unique_state in unique:
+                if np.dot(self.states[i], unique_state) > threshold:
+                    found = True
+                    break
+            if not found:
+                unique.append(self.states[i])
 
-    def test_state_compare(self, negative_samples=0, sparse_state=True):
-        if not self.state_comparator_trained:
-            print(BColors.WARNING + "Attention, state comparator was not trained before calling test_state_compare!" + BColors.ENDC)
+        return unique_states_episode
 
-        comparison = []
-        dl = DataLoader(SCSet(states=self.states, negative_samples=negative_samples, sparse_state=sparse_state),
-                        batch_size=512, drop_last=False, shuffle=False, num_workers=self.workers)
+    def get_unique_states(self, threshold=0.999):
+        unique = []
+        for i, done in tqdm(enumerate(self.dones),
+                            desc=f"Search for Unique States in whole dataset ({self.environment} @ {self.buffer_type})",
+                            total=len(self.dones)):
+            found = False
+            for unique_state in unique:
+                if np.dot(self.states[i], unique_state) > threshold:
+                    found = True
+                    break
+            if not found:
+                unique.append(self.states[i])
 
-        with torch.no_grad():
-            for state, _ in dl:
-                comparison.extend(self.state_comparator(state).cpu().numpy())
-
-        return comparison
+        return len(unique) / len(self.states)
 
     def train_behavior_policy(self, epochs=10, batch_size=64, lr=1e-3, verbose=False):
 
@@ -252,7 +212,7 @@ class Evaluator():
         if verbose:
             print(f"Inital loss:", evaluate(self.behavioral, dl, loss))
 
-        for ep in tqdm(range(epochs), desc="Training Behavioral Policy"):
+        for ep in tqdm(range(epochs), desc=f"Training Behavioral Policy ({self.environment} @ {self.buffer_type})"):
             errs = update(self.behavioral, dl, loss, optimizer)
 
             if verbose:
@@ -260,23 +220,6 @@ class Evaluator():
 
         self.behavioral_trained = True
 
-    def train_state_comparator(self, epochs=10, batch_size=64, lr=1e-3, negative_samples=10, sparse_state=True, verbose=False):
-
-        dl = DataLoader(SCSet(states=self.states, negative_samples=negative_samples, sparse_state=sparse_state),
-                        batch_size=batch_size, drop_last=True, shuffle=True, num_workers=self.workers)
-        optimizer = Adam(self.state_comparator.parameters(), lr=lr)
-        loss = nn.BCELoss()
-
-        if verbose:
-            print(f"Inital loss:", evaluate(self.state_comparator, dl, loss))
-
-        for ep in tqdm(range(epochs), desc="Training State Comparator"):
-            errs = update(self.state_comparator, dl, loss, optimizer)
-
-            if verbose:
-                print(f"Epoch: {ep + 1}, loss: {np.mean(errs)}")
-
-        self.state_comparator_trained = True
 
 
 

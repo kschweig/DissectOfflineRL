@@ -47,20 +47,3 @@ class BC(BaseNet):
         state = super(BC, self).forward(state)
 
         return self.out(state)
-
-
-class SC(BaseNet):
-
-    def __init__(self, num_state, seed):
-        super(SC, self).__init__(2*num_state, seed)
-
-        self.out = nn.Linear(in_features=self.num_hidden, out_features=1)
-
-        for param in self.out.parameters():
-            if len(param.shape) > 1:
-                torch.nn.init.kaiming_normal_(param, mode='fan_in', nonlinearity='linear')
-
-    def forward(self, state):
-        state = super(SC, self).forward(state)
-
-        return torch.sigmoid(self.out(state)).view(-1,)
