@@ -1,0 +1,15 @@
+\begin{table}[h]
+\centering
+\begin{tabular}{l|ccc}
+Metric  \hspace{8pt} \symbol{92} \hspace{8pt} Buffer Type & Experience Replay & Fully Trained Behavioral & Random Policy \\ \hline 
+Reward & $0.40 \pm 0.38$ & $0.12 \pm 0.31$ & $0.09 \pm 0.20$\\ 
+Reward (Normalized) & $0.40 \pm 0.38$ & $0.12 \pm 0.31$ & $0.09 \pm 0.20$\\ 
+Entropy & $0.80 \pm 0.17$ & $0.01 \pm 0.03$ & $1.00 \pm 0.00$\\ 
+Episode Length & $200.80 \pm 122.60$ & $286.68 \pm 100.72$ & $299.80 \pm 60.49$\\ 
+Sparsity & $0.99 \pm 0.02$ & $0.99 \pm 0.02$ & $1.00 \pm 0.00$\\ 
+Unique States / Episode & $28.35 \pm 12.46$ & $6.72 \pm 3.81$ & $62.31 \pm 19.50$\\ 
+Unique States & $0.0142$ & $0.0019$ & $0.0177$\\ 
+\end{tabular}
+\caption{Dataset evaluation metrics for all buffer types of environment 'MiniGrid-SimpleCrossingS9N1-v0'.}
+\label{tab:ds_eval_simple}
+\end{table}

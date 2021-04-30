@@ -1,0 +1,15 @@
+\begin{table}[h]
+\centering
+\begin{tabular}{l|ccc}
+Metric  \hspace{8pt} \symbol{92} \hspace{8pt} Buffer Type & Experience Replay & Fully Trained Behavioral & Random Policy \\ \hline 
+Reward & $0.64 \pm 0.42$ & $0.71 \pm 0.41$ & $0.04 \pm 0.17$\\ 
+Reward (Normalized) & $0.64 \pm 0.42$ & $0.71 \pm 0.41$ & $0.04 \pm 0.17$\\ 
+Entropy & $0.80 \pm 0.14$ & $0.00 \pm 0.00$ & $1.00 \pm 0.01$\\ 
+Episode Length & $49.52 \pm 57.54$ & $42.11 \pm 58.96$ & $26.56 \pm 29.39$\\ 
+Sparsity & $0.93 \pm 0.06$ & $0.91 \pm 0.06$ & $1.00 \pm 0.01$\\ 
+Unique States / Episode & $10.68 \pm 4.50$ & $7.59 \pm 1.25$ & $9.85 \pm 7.63$\\ 
+Unique States & $0.0025$ & $0.0005$ & $0.0026$\\ 
+\end{tabular}
+\caption{Dataset evaluation metrics for all buffer types of environment 'MiniGrid-LavaGapS6-v0'.}
+\label{tab:ds_eval_lava}
+\end{table}
