@@ -13,6 +13,7 @@ Test Random behavioural policy
 # project parameters
 envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0']
 discounts = [0.9, 0.99, 0.95]
+buffer_types = ["er", "fully", "random"]
 agent_types = ["SQN"]
 #agent_types = ["BC", "SAC", "BCQ", "DQN", "QRDQN"]
 multiple_runs = 1
