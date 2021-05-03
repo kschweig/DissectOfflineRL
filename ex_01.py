@@ -1,79 +1,77 @@
-import os
-import pickle
-import numpy as np
 from source.train_online import train_online
 from source.train_offline import train_offline
 from source.offline_ds_evaluation.evaluator import Evaluator
+from source.offline_ds_evaluation.latex import create_latex_table
 from multiprocessing import Pool
+import os
+import pickle
+import numpy as np
 
-"""
-Test Random behavioural policy
-"""
 
 # project parameters
-envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0']
-discounts = [0.9, 0.99, 0.95]
+envs = ['CartPole-v1', 'Acrobot-v1', "MiniGrid-LavaGapS6-v0", "MiniGrid-SimpleCrossingS9N1-v0"]
+discounts = [0.99, 0.99, 0.95, 0.95]
 buffer_types = ["er", "fully", "random"]
-agent_types = ["SQN"]
-#agent_types = ["BC", "SAC", "BCQ", "DQN", "QRDQN"]
-multiple_runs = 1
+agent_types = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "SAC", "REM", "BCQ", "CRR"]
+multiple_runs = 5
 # experiment parameters
 experiment = 1
 seed = 42
 # hyperparameters for online training
 behavioral = "DQN"
+transitions_online = 100000
 # hyperparameters for offline training
-transitions = 200000
+transitions_offline = 1 * transitions_online
 batch_size = 128
+lr = [1e-4] * len(agent_types)
+# parameters for evaluation
+random_rewards = [0, -500, 0, 0]
+optimal_rewards = [500, -80, 1, 1]
 
+
+def create_ds(args):
+    envid, discount = args
+
+    train_online(experiment=experiment, agent_type=behavioral, discount=discount, envid=envid,
+                 transitions=transitions_online, buffer_size=50000,
+                 run=1, seed=seed)
 
 def train(args):
     envid, discount = args
-    """
-    train_online(experiment=experiment, agent_type=behavioral, discount=discount, envid=envid,
-                 transitions=transitions, buffer_size=50000,
-                 run=1, seed=seed)
-    """
 
-    for agent in agent_types:
-        for run in range(1, multiple_runs + 1):
-            train_offline(experiment=experiment, envid=envid, agent_type=agent, discount=discount,
-                          transitions=transitions, batch_size=batch_size, use_run=1, run=run, seed=seed+run, use_remaining_reward=True)
-
+    for run in range(1, multiple_runs + 1):
+        for a, agent in enumerate(agent_types):
+            for bt in range(len(buffer_types)):
+                train_offline(experiment=experiment, envid=envid, agent_type=agent, buffer_type=buffer_types[bt],
+                              discount=discount, transitions=transitions_offline, batch_size=batch_size, lr=lr[a],
+                              use_run=1, run=run, seed=seed+run, use_remaining_reward=(agent == "EVMCP"))
 
 def assess_ds(args):
-    envid, use_run = args
+    use_run = 1
+    envid, buffer_type, random_reward, optimal_reward = args
 
-    with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{use_run}.pkl"), "rb") as f:
+    with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{use_run}_{buffer_type}.pkl"), "rb") as f:
         buffer = pickle.load(f)
 
-    eval = Evaluator(buffer.state, buffer.action, buffer.reward, np.invert(buffer.not_done))
-    print(envid, " Rewards:", eval.get_rewards())
-    print(envid, " Episode Lengths:", eval.get_episode_lengths())
-    eval.train_behavior_policy(batch_size=256, epochs=2)
-    print(envid," Behavioral Entropy:", eval.get_bc_entropy())
-    eval.train_value_critic(batch_size=256, epochs=5, lr=1e-2, verbose=True)
-    print(envid," Behavioral Value:", eval.get_value_estimate())
-    eval.train_state_comparator(batch_size=256, epochs=2)
+    os.makedirs(os.path.join("results", "ds_eval"), exist_ok=True)
+    evaluator = Evaluator(envid, buffer_type, buffer.state, buffer.action, buffer.reward, np.invert(buffer.not_done))
 
-    #print("same states")
-    #test = eval.test_state_compare(negative_samples=0)
-    #print(np.min(test), np.mean(test), np.max(test))
-    #print("disjoint states")
-    #test = eval.test_state_compare(negative_samples=-1)
-    #print(np.min(test), np.mean(test), np.max(test))
-
-    print(eval.get_start_randomness(compare_with=50))
-    print(eval.get_state_randomness(compare_with=1))
-    print(eval.get_episode_intersections())
-
+    path = os.path.join("results", "ds_eval", f"{envid}_{buffer_type}")
+    return evaluator.evaluate(path, random_reward, optimal_reward, epochs=2)
 
 if __name__ == '__main__':
-    #with Pool(len(envs), maxtasksperchild=1) as p:
-        #p.map(train, zip(envs,discounts))
-        #p.map(assess_ds, zip(envs, [1]*3))
-    #train((envs[0], 0.9))
-    assess_ds((envs[0], 1))
-    #assess_ds((envs[1], 1))
-    #assess_ds((envs[2], 1))
+    with Pool(len(envs), maxtasksperchild=1) as p:
+        p.map(create_ds, zip(envs, discounts))
+        p.map(train, zip(envs, discounts))
 
+    # assess all datasets
+    results = []
+    for e, env in enumerate(envs):
+        for buffer in buffer_types:
+
+            results.append(assess_ds((env, buffer, random_rewards[e], optimal_rewards[e])))
+
+    for i in range(0, len(envs) * len(buffer_types), len(buffer_types)):
+        texpath = os.path.join("results", "ds_eval", f"{results[i][0]}.tex")
+        print(texpath)
+        create_latex_table(texpath, results[i:i+len(buffer_types)])
