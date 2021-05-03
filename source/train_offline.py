@@ -60,7 +60,7 @@ def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discoun
         agent.train(buffer, writer, maximum, minimum)
 
         if (iter+1) % evaluate_every == 0:
-            evaluate(env, agent, writer, all_rewards, buffer.state[0], over_episodes=mean_over)
+            evaluate(env, agent, writer, all_rewards, over_episodes=mean_over)
 
 
     return agent

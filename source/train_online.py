@@ -61,13 +61,13 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
                     writer.add_scalar("train/Reward (SMA)", np.mean(ep_rewards[-100:]), ep)
                     writer.add_scalar("train/Reward", ep_reward, ep)
                     writer.add_scalar("train/Max-Action-Value (mean)", np.nanmean(action_values), ep)
-                    writer.add_scalar("train/Max-Action-Value (std)", np.nanmean(action_values), ep)
-                    writer.add_scalar("train/Action-Values (mean)", np.nanmean(values), ep)
-                    writer.add_scalar("train/Action-Values (std)", np.nanmean(values), ep)
+                    writer.add_scalar("train/Max-Action-Value (std)", np.nanstd(action_values), ep)
+                    writer.add_scalar("train/Values", np.nanmean(values), ep)
+                    writer.add_scalar("train/Action-Values std", np.nanmean(values_std), ep)
                     writer.add_scalar("train/Entropy", np.nanmean(entropies), ep)
 
             state = env.reset()
-            ep_reward, values, action_values, entropies = 0, [], [], []
+            ep_reward, values, values_std, action_values, entropies = 0, [], [], [], []
             ep += 1
 
         # obtain action
@@ -82,8 +82,14 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
 
         # add reward, value and entropy of current step for means over episode
         ep_reward += reward
-        values.append(value.numpy())
-        action_values.append(value.max().item())
+        try:
+            values.append(value.numpy().mean())
+            values_std.append(value.numpy().std())
+            action_values.append(value.max().item())
+        except AttributeError:
+            values.append(value)
+            values_std.append(value)
+            action_values.append(value)
         entropies.append(entropy)
 
         # now next state is the new state
