@@ -44,7 +44,7 @@ class BehavioralCloning(Agent):
             actions = F.softmax(actions, dim=1)
             dist = Categorical(actions.unsqueeze(0))
 
-            return dist.sample().item(), np.nan, entropy(actions)
+            return dist.sample().item(), torch.FloatTensor([np.nan]), entropy(actions)
 
     def train(self, buffer, writer, minimum=None, maximum=None, use_probas=False):
         # Sample replay buffer

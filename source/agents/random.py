@@ -20,7 +20,7 @@ class Random(Agent):
     def policy(self, state, eval=False):
         possible = np.arange(self.action_space)
 
-        return self.rng.choice(possible), np.nan, \
+        return self.rng.choice(possible), torch.FloatTensor([np.nan]), \
                entropy((torch.ones(self.action_space) / self.action_space).float().view(1,-1))
 
     def train(self, buffer, writer, minimum=None, maximum=None, use_probas=False):
