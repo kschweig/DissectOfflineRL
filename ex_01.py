@@ -12,7 +12,7 @@ import numpy as np
 envs = ['CartPole-v1', 'Acrobot-v1', "MiniGrid-LavaGapS6-v0", "MiniGrid-SimpleCrossingS9N1-v0"]
 discounts = [0.99, 0.99, 0.95, 0.95]
 buffer_types = ["er", "fully", "random"]
-agent_types = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "SAC", "REM", "BCQ", "CRR"]
+agent_types = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CRR", "CQL"]
 multiple_runs = 5
 # experiment parameters
 experiment = 1

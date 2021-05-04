@@ -10,6 +10,7 @@ from ..agents.bcq import BCQ
 from ..agents.sac import SAC
 from ..agents.evmcp import EVMCP
 from ..agents.crr import CRR
+from ..agents.cql import CQL
 from ..agents.bc import BehavioralCloning
 from ..agents.bve import BehavioralValueEstimation
 from ..agents.random import Random
@@ -29,7 +30,9 @@ def get_agent(agent_type, obs_space, num_actions, discount, lr, seed):
     elif agent_type == "EVMCP":
         return EVMCP(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "CRR":
-        return CRR(obs_space, num_actions, discount, lr, quantiles=50, seed=seed)
+        return CRR(obs_space, num_actions, discount, lr, seed=seed)
+    elif agent_type == "CQL":
+        return CQL(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "BC":
         return BehavioralCloning(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "BVE":

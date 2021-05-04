@@ -12,7 +12,7 @@ import numpy as np
 envs = ['CartPole-v1', 'Acrobot-v1', "MiniGrid-LavaGapS6-v0", "MiniGrid-SimpleCrossingS9N1-v0"]
 discounts = [0.99, 0.99, 0.95, 0.95]
 buffer_types = ["er", "fully", "random"]
-agent_types = ["BVE"]
+agent_types = ["CQL", "CRR"]
 multiple_runs = 1
 # experiment parameters
 experiment = 5
@@ -60,9 +60,9 @@ def assess_ds(args):
     return evaluator.evaluate(path, random_reward, optimal_reward, epochs=2)
 
 if __name__ == '__main__':
-    #with Pool(len(envs), maxtasksperchild=1) as p:
+    with Pool(len(envs), maxtasksperchild=1) as p:
         #p.map(create_ds, zip(envs, discounts))
-        #p.map(train, zip(envs, discounts))
+        p.map(train, zip(envs, discounts))
 
     # assess all datasets
     results = []
