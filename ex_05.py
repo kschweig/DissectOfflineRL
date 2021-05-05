@@ -13,7 +13,7 @@ envs = ['CartPole-v1', 'Acrobot-v1', "MiniGrid-LavaGapS6-v0", "MiniGrid-SimpleCr
 discounts = [0.99, 0.99, 0.95, 0.95]
 buffer_types = ["er", "fully", "random"]
 agent_types = ["CQL", "CRR"]
-multiple_runs = 1
+multiple_runs = 2
 # experiment parameters
 experiment = 5
 seed = 42
@@ -61,9 +61,10 @@ def assess_ds(args):
 
 if __name__ == '__main__':
     with Pool(len(envs), maxtasksperchild=1) as p:
-        #p.map(create_ds, zip(envs, discounts))
+        p.map(create_ds, zip(envs, discounts))
         p.map(train, zip(envs, discounts))
 
+    """
     # assess all datasets
     results = []
     for e, env in enumerate(envs):
@@ -75,3 +76,4 @@ if __name__ == '__main__':
         texpath = os.path.join("results", "ds_eval", f"{results[i][0]}.tex")
         print(texpath)
         create_latex_table(texpath, results[i:i+len(buffer_types)])
+    """

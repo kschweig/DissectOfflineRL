@@ -21,12 +21,12 @@ seed = 42
 behavioral = "DQN"
 transitions_online = 100000
 # hyperparameters for offline training
-transitions_offline = 1 * transitions_online
-batch_size = 128
+transitions_offline = 2 * transitions_online
+batch_size = 8
 lr = [1e-4] * len(agent_types)
 # parameters for evaluation
 random_rewards = [0, -500, 0, 0]
-optimal_rewards = [500, -80, 1, 1]
+optimal_rewards = [500, -75, 1, 1]
 
 
 def create_ds(args):
@@ -70,8 +70,3 @@ if __name__ == '__main__':
         for buffer in buffer_types:
 
             results.append(assess_ds((env, buffer, random_rewards[e], optimal_rewards[e])))
-
-    for i in range(0, len(envs) * len(buffer_types), len(buffer_types)):
-        texpath = os.path.join("results", "ds_eval", f"{results[i][0]}.tex")
-        print(texpath)
-        create_latex_table(texpath, results[i:i+len(buffer_types)])
