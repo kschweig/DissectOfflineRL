@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 from .agent import Agent
 from ..utils.evaluation import entropy
-from ..networks.critic import QrCritic
+from ..networks.critic import Critic
 from ..networks.actor import Actor
 
 
@@ -18,7 +18,6 @@ class CRR(Agent):
                  action_space,
                  discount,
                  lr=1e-4,
-                 quantiles=50,
                  seed=None):
         super(CRR, self).__init__(obs_space, action_space, discount, lr, seed)
 
@@ -35,19 +34,15 @@ class CRR(Agent):
         # After how many training steps 'snap' target to main network?
         self.target_update_freq = 100
 
-        # Quantiles
-        self.quantiles = quantiles
-        self.quantile_tau = torch.FloatTensor([i / self.quantiles for i in range(1, self.quantiles + 1)]).to(self.device)
-
         # Q-Networks
-        self.Q = QrCritic(self.obs_space, self.action_space, seed, quantiles).to(self.device)
+        self.Q = Critic(self.obs_space, self.action_space, seed).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
 
         # policy network
         self.actor = Actor(self.obs_space, self.action_space, seed).to(self.device)
 
         # huber loss
-        self.huber = nn.SmoothL1Loss(reduction='none')
+        self.huber = nn.SmoothL1Loss()
 
         # Optimization
         self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
@@ -77,6 +72,7 @@ class CRR(Agent):
                 actions = F.softmax(actions, dim=1)
                 dist = Categorical(actions.unsqueeze(0))
 
+                #return q_val.argmax().item(), q_val, entropy(actions)
                 return dist.sample().item(), q_val, entropy(actions)
         else:
             return self.rng.integers(self.action_space), np.nan, np.nan
@@ -100,19 +96,17 @@ class CRR(Agent):
 
         # calculate advantage
         with torch.no_grad():
-            self.Q.eval()
             current_Qs = self.Q(state)
             advantage = current_Qs - current_Qs.mean(dim=1, keepdim=True)
 
         # predict action the policy would take
-        pred_action = self.actor(state)
-        log_actions = F.log_softmax(pred_action, dim=1)
+        log_actions = F.log_softmax(self.actor(state), dim=1)
 
         # policy loss
         # exp style
-        loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
+        #loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
         # binary style
-        #loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
+        loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
 
         writer.add_scalar("train/policy-loss", torch.mean(loss).detach().cpu().item(), self.iterations)
 
@@ -132,43 +126,23 @@ class CRR(Agent):
 
         # Compute the target Q value
         with torch.no_grad():
-            target_Qs = self.Q_target(next_state)
-            action_indices = torch.argmax(target_Qs.mean(dim=2), dim=1, keepdim=True)
-            target_Qs = target_Qs.gather(1, action_indices.unsqueeze(2).expand(-1, 1, self.quantiles))
-            target_Qs = reward.unsqueeze(1) + not_done.unsqueeze(1) * self.discount * target_Qs
+            actions = self.actor(next_state)
+            actions = F.log_softmax(actions, dim=1)
+            dist = Categorical(logits=actions)
+            target_Q = reward + not_done * self.discount * self.Q_target(next_state).gather(1, dist.sample().unsqueeze(1))
 
         # Get current Q estimate
-        current_Qs = self.Q(state).gather(1, action.unsqueeze(2).expand(-1, 1,self.quantiles)).transpose(1, 2)
+        current_Q = self.Q(state).gather(1, action)
 
-        # correct dimensions?
-        assert target_Qs.shape == (buffer.batch_size, 1, self.quantiles), \
-            f"Expected {(buffer.batch_size, 1, self.quantiles)}, was {target_Qs.shape} instead"
-        assert current_Qs.shape == (buffer.batch_size, self.quantiles, 1), \
-            f"Expected {(buffer.batch_size, self.quantiles, 1)}, was {current_Qs.shape} instead"
+        # Compute Q loss (Huber loss)
+        Q_loss = self.huber(current_Q, target_Q)
 
-        # expand along singular dimensions
-        target_Qs = target_Qs.expand(-1, self.quantiles, self.quantiles)
-        current_Qs = current_Qs.expand(-1, self.quantiles, self.quantiles)
-
-        # Compute TD error
-        td_error = target_Qs - current_Qs
-        assert td_error.shape == (buffer.batch_size, self.quantiles, self.quantiles), \
-            f"Expected {(buffer.batch_size, self.quantiles, self.quantiles)}, was {td_error.shape} instead"
-
-        # calculate loss through TD
-        huber_l = self.huber(current_Qs, target_Qs)
-
-        # calculate quantile loss
-        quantile_loss = abs(self.quantile_tau - (td_error.detach() < 0).float()) * huber_l
-        quantile_loss = quantile_loss.sum(dim=1).mean(dim=1).mean()
-
-        # log temporal difference error and quantile loss
-        writer.add_scalar("train/TD-error", torch.mean(huber_l).detach().cpu().item(), self.iterations)
-        writer.add_scalar("train/quantile_loss", torch.mean(quantile_loss).detach().cpu().item(), self.iterations)
+        # log temporal difference error
+        writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q
         self.optimizer.zero_grad()
-        quantile_loss.backward()
+        Q_loss.backward()
         self.optimizer.step()
 
         self.iterations += 1

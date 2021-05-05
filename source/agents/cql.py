@@ -43,7 +43,7 @@ class CQL(Agent):
         self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
 
         # temperature parameter
-        self.alpha = 0.1
+        self.alpha = 1
 
     def policy(self, state, eval=False):
 
