@@ -37,13 +37,6 @@ class Agent(ABC):
         """
 
     @abstractmethod
-    def determinancy(self):
-        """
-        Determinancy (1-eps) of the policy
-        :return:
-        """
-
-    @abstractmethod
     def save_state(self) -> None:
         """
         Use this method to save the current state of your agent to the agent_directory.

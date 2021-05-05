@@ -69,9 +69,6 @@ class BehavioralCloning(Agent):
 
         self.iterations += 1
 
-    def determinancy(self):
-        return 0.0
-
     def save_state(self) -> None:
         torch.save(self.actor.state_dict(), os.path.join("models", self.get_name() + "_actor.pt"))
         torch.save(self.optimizer.state_dict(), os.path.join("models", self.get_name() + "_optim.pt"))

@@ -26,9 +26,6 @@ class Random(Agent):
     def train(self, buffer, writer, minimum=None, maximum=None, use_probas=False):
         pass
 
-    def determinancy(self):
-        return 0.0
-
     def save_state(self) -> None:
         pass
 

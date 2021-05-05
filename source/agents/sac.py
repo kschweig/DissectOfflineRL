@@ -173,9 +173,6 @@ class SAC(Agent):
     def get_name(self) -> str:
         return "SAC"
 
-    def determinancy(self):
-        return round((1-max(self.slope * self.iterations + self.initial_eps, self.end_eps))*100, 2)
-
     def save_state(self) -> None:
         torch.save(self.Q.state_dict(), os.path.join("models", self.get_name() + "_Q.pt"))
         torch.save(self.optimizer.state_dict(), os.path.join("models", self.get_name() + "_optim.pt"))
