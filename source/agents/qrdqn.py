@@ -73,10 +73,6 @@ class QRDQN(Agent):
         self.Q.train()
         self.Q_target.train()
 
-        # log state distribution
-        if self.iterations % 1000 == 0:
-            writer.add_histogram("train/states", state, self.iterations)
-
         # Compute the target Q value
         with torch.no_grad():
             target_Qs = self.Q_target(next_state)

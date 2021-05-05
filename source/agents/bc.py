@@ -53,10 +53,6 @@ class BehavioralCloning(Agent):
         # set networks to train mode
         self.actor.train()
 
-        # log state distribution
-        if self.iterations % 1000 == 0:
-            writer.add_histogram("train/states", state, self.iterations)
-
         # predict action the behavioral policy would take
         pred_action = self.actor(state)
 

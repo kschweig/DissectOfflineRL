@@ -54,10 +54,6 @@ class EVMCP(Agent):
         # set network to train mode
         self.Q.train()
 
-        # log state distribution
-        if self.iterations % 1000 == 0:
-            writer.add_histogram("train/states", state, self.iterations)
-
         # Get current Q estimate
         current_Q = self.Q(state).gather(1, action)
 

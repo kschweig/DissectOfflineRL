@@ -92,10 +92,6 @@ class SAC(Agent):
         self.Q2_target.train()
         self.actor.train()
 
-        # log state distribution
-        if self.iterations % 1000 == 0:
-            writer.add_histogram("train/states", state, self.iterations)
-
         # Compute the target Q value
         with torch.no_grad():
             target_Q = torch.min(self.Q1_target(next_state), self.Q2_target(next_state))

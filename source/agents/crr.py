@@ -81,10 +81,6 @@ class CRR(Agent):
         # Sample replay buffer
         state, action, next_state, reward, not_done = buffer.sample(minimum, maximum, use_probas)
 
-        # log state distribution
-        if self.iterations % 1000 == 0:
-            writer.add_histogram("train/states", state, self.iterations)
-
         ###################################
         ### Policy update
         ###################################

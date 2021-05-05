@@ -69,10 +69,6 @@ class REM(Agent):
         self.Q.train()
         self.Q_target.train()
 
-        # log state distribution
-        if self.iterations % 1000 == 0:
-            writer.add_histogram("train/states", state, self.iterations)
-
         # Compute the target Q value
         with torch.no_grad():
             target_Q = reward + not_done * self.discount * self.Q_target(next_state).max(1, keepdim=True)[0]

@@ -86,10 +86,6 @@ class BCQ(Agent):
         self.Q.train()
         self.Q_target.train()
 
-        # log state distribution
-        if self.iterations % 1000 == 0:
-            writer.add_histogram("train/states", state, self.iterations)
-
         with torch.no_grad():
             q_val = self.Q(next_state)
             actions = self.actor(next_state)

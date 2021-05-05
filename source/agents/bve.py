@@ -67,10 +67,6 @@ class BehavioralValueEstimation(Agent):
         # set networks to train mode
         self.Q.train()
 
-        # log state distribution
-        if self.iterations % 1000 == 0:
-            writer.add_histogram("train/states", state, self.iterations)
-
         # Compute the target Q value
         with torch.no_grad():
             target_Q = reward + not_done * self.discount * self.Q(next_state).gather(1, next_action)
