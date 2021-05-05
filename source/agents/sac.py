@@ -104,7 +104,6 @@ class SAC(Agent):
             target_Q = reward + not_done * self.discount * target_Q.sum(dim=1, keepdim=True)
 
         # Get current Q estimate
-
         current_Q1 = self.Q1(state).gather(1, action)
         current_Q2 = self.Q2(state).gather(1, action)
 

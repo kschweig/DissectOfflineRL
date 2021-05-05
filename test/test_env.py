@@ -26,7 +26,7 @@ Solved is 200 points. Episode until touching the ground.
 envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0', 'LunarLander-v2']
 
 #env = gym.make(envs[3])
-env = FlatImgObsWrapper(gym.make('MiniGrid-LavaGapS7-v0'))
+env = FlatImgObsWrapper(gym.make('MiniGrid-SimpleCrossingS9N1-v0'))
 obs = env.reset()
 print(env.observation_space.high)
 print(env.observation_space.low)
