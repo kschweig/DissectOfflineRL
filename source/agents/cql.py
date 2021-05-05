@@ -43,7 +43,7 @@ class CQL(Agent):
         self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
 
         # temperature parameter
-        self.alpha = 1
+        self.alpha = 0.01
 
     def policy(self, state, eval=False):
 
@@ -88,7 +88,6 @@ class CQL(Agent):
 
         # calculate regularizing loss
         # use next_action as being sampled from the behavior distribution
-
         R_loss = torch.mean(self.alpha * (torch.logsumexp(current_Qs, dim=1) - current_Qs.gather(1, next_action).squeeze(1)))
 
         # log regularizer error
