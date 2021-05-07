@@ -170,13 +170,24 @@ class SAC(Agent):
             target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
 
     def get_name(self) -> str:
-        return "SAC"
+        return "SoftActorCritic"
 
     def save_state(self) -> None:
-        torch.save(self.Q.state_dict(), os.path.join("models", self.get_name() + "_Q.pt"))
-        torch.save(self.optimizer.state_dict(), os.path.join("models", self.get_name() + "_optim.pt"))
+        torch.save(self.Q1.state_dict(), os.path.join("models", self.get_name() + "_Q1.pt"))
+        torch.save(self.Q2.state_dict(), os.path.join("models", self.get_name() + "_Q2.pt"))
+        torch.save(self.actor.state_dict(), os.path.join("models", self.get_name() + "_actor.pt"))
+        torch.save(self.alpha, os.path.join("models", self.get_name() + "_alpha.pt"))
+        torch.save(self.Q_optimizer.state_dict(), os.path.join("models", self.get_name() + "_optim1.pt"))
+        torch.save(self.actor_optimizer.state_dict(), os.path.join("models", self.get_name() + "_optim2.pt"))
+        torch.save(self.alpha_optimizer.state_dict(), os.path.join("models", self.get_name() + "_optim3.pt"))
 
     def load_state(self) -> None:
-        self.Q.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_Q.pt")))
-        self.Q_target = copy.deepcopy(self.Q)
-        self.optimizer.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_optim.pt")))
+        self.Q1.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_Q1.pt")))
+        self.Q1_target = copy.deepcopy(self.Q1)
+        self.Q2.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_Q2.pt")))
+        self.Q2_target = copy.deepcopy(self.Q2)
+        self.actor.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_actor.pt")))
+        self.alpha = torch.load(os.path.join("models", self.get_name() + "_alpha.pt"))
+        self.Q_optimizer.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_optim1.pt")))
+        self.actor_optimizer.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_optim2.pt")))
+        self.alpha_optimizer.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_optim3.pt")))

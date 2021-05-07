@@ -122,13 +122,15 @@ class BCQ(Agent):
             self.Q_target.load_state_dict(self.Q.state_dict())
 
     def get_name(self) -> str:
-        return "BCQ"
+        return "BatchConstrainedQLearning"
 
     def save_state(self) -> None:
         torch.save(self.Q.state_dict(), os.path.join("models", self.get_name() + "_Q.pt"))
+        torch.save(self.actor.state_dict(), os.path.join("models", self.get_name() + "_actor.pt"))
         torch.save(self.optimizer.state_dict(), os.path.join("models", self.get_name() + "_optim.pt"))
 
     def load_state(self) -> None:
         self.Q.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_Q.pt")))
         self.Q_target = copy.deepcopy(self.Q)
+        self.actor.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_actor.pt")))
         self.optimizer.load_state_dict(torch.load(os.path.join("models", self.get_name() + "_optim.pt")))

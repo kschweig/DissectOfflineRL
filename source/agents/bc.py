@@ -31,9 +31,6 @@ class BehavioralCloning(Agent):
         # Optimization
         self.optimizer = torch.optim.Adam(params=self.actor.parameters(), lr=self.lr)
 
-    def get_name(self) -> str:
-        return "BC"
-
     def policy(self, state, eval=False):
         # set networks to eval mode
         self.actor.eval()
@@ -68,6 +65,9 @@ class BehavioralCloning(Agent):
         self.optimizer.step()
 
         self.iterations += 1
+
+    def get_name(self) -> str:
+        return "BehavioralCloning"
 
     def save_state(self) -> None:
         torch.save(self.actor.state_dict(), os.path.join("models", self.get_name() + "_actor.pt"))

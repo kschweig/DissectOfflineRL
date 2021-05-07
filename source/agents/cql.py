@@ -104,7 +104,7 @@ class CQL(Agent):
             self.Q_target.load_state_dict(self.Q.state_dict())
 
     def get_name(self) -> str:
-        return "CQL"
+        return "ConservativeQLearning"
 
     def save_state(self) -> None:
         torch.save(self.Q.state_dict(), os.path.join("models", self.get_name() + "_Q.pt"))

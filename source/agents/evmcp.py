@@ -71,7 +71,7 @@ class EVMCP(Agent):
         self.iterations += 1
 
     def get_name(self) -> str:
-        return "EVMCP"
+        return "EveryVisitMonteCarloPrediction"
 
     def save_state(self) -> None:
         torch.save(self.Q.state_dict(), os.path.join("models", self.get_name() + "_Q.pt"))
