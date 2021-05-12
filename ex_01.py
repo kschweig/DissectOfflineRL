@@ -26,7 +26,7 @@ batch_size = 8
 lr = [1e-4] * len(agent_types)
 # parameters for evaluation
 random_rewards = [0, -500, 0, 0]
-optimal_rewards = [500, -75, 1, 1]
+optimal_rewards = [500, -75, 0.95, 0.961]
 
 
 def create_ds(args):
@@ -60,13 +60,13 @@ def assess_ds(args):
     return evaluator.evaluate(path, random_reward, optimal_reward, epochs=2)
 
 if __name__ == '__main__':
-    with Pool(len(envs), maxtasksperchild=1) as p:
-        p.map(create_ds, zip(envs, discounts))
-        p.map(train, zip(envs, discounts))
-
     # assess all datasets
     results = []
     for e, env in enumerate(envs):
         for buffer in buffer_types:
-
             results.append(assess_ds((env, buffer, random_rewards[e], optimal_rewards[e])))
+
+    for i in range(0, len(envs) * len(buffer_types), len(buffer_types)):
+        texpath = os.path.join("results", "ds_eval", f"{results[i][0]}.tex")
+        print(texpath)
+        create_latex_table(texpath, results[i:i + len(buffer_types)])

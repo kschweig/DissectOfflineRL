@@ -9,9 +9,10 @@ def plot_histograms(output, reward, episode_length, unique_states_episode, entro
     type="png"
 
     fig, axs = plt.subplots(2, 3, figsize=(9,4))
-    axs[0, 0].hist(reward, bins=bins)
+    axs[0, 0].hist(reward, bins=bins, range=(0, 1))
     axs[0, 0].set_title('Reward')
     axs[0, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    axs[0, 0].set_xticks([0, 0.25, 0.5, 0.75, 1])
 
     axs[0, 1].hist(action, bins=(2 * (np.max(action)) + 1), range=(np.min(action) - 0.25, np.max(action) + 0.25))
     axs[0, 1].set_title('Action')
@@ -34,10 +35,11 @@ def plot_histograms(output, reward, episode_length, unique_states_episode, entro
     axs[1, 1].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     axs[1, 1].locator_params(axis='x', integer=True)
 
-    axs[1, 2].hist(unique_states_episode, bins=bins, range=(0, np.max(unique_states_episode)))
-    axs[1, 2].set_title('Unique States')
+    axs[1, 2].hist(unique_states_episode, bins=bins, range=(0, 1))
+    axs[1, 2].set_title('Uniqueness')
     axs[1, 2].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     axs[1, 2].locator_params(axis='x', integer=True)
+    axs[1, 2].set_xticks([0, 0.25, 0.5, 0.75, 1])
 
     plt.tight_layout()
     plt.savefig(output+"."+type)

@@ -7,6 +7,10 @@ import re
 #       Settings         #
 ##########################
 
+# Which experiment to extract
+import tensorflow.python.framework.errors_impl
+
+ex = "ex5"
 # Which tag should be extracted
 #'eval/Reward (SMA)' 'eval/Entropy'
 tag = 'eval/Reward (SMA)'
@@ -15,7 +19,7 @@ mark = "reward"
 
 
 
-os.chdir(os.path.join("..", "..", "runs", "ex5"))
+os.chdir(os.path.join("..", "..", "runs", ex))
 files=[]
 outpath = os.path.join("..", "..", "results", "csv", mark)
 os.makedirs(outpath, exist_ok=True)
@@ -33,8 +37,14 @@ for file in files:
 
     if run == 1 and data != []:
         with open(os.path.join(outpath, f"{env}_{mode}_{algo}.csv"), "w") as w:
-            for line in data:
-                w.write(";".join([str(l) for l in line])+"\n")
+            minlen = len(data[0])
+            for i, line in enumerate(data):
+                if len(line) < minlen:
+                    # seldom, there occurs the phenomenon that the last reward in the tffiles cannot be read.
+                    # Then replace all with the values read before. Only a minor difference on 2k iterations.
+                    print("Datapoint at iteration", i, "replaced.")
+                    line = data[i - 1]
+                w.write(";".join([str(l) for l in line]) + "\n")
         data = []
 
     env = file.split("/")[0]
@@ -54,3 +64,14 @@ for file in files:
                     i += 1
     except:
         print(f"Error in obtaining summary from {env}/{mode}/{algo}/{run}, may not contain complete data")
+
+# write data collected in the last run
+with open(os.path.join(outpath, f"{env}_{mode}_{algo}.csv"), "w") as w:
+    minlen = len(data[0])
+    for i, line in enumerate(data):
+        if len(line) < minlen:
+            # seldom, there occurs the phenomenon that the last reward in the tffiles cannot be read.
+            # Then replace all with the values read before. Only a minor difference on 2k iterations.
+            print("Datapoint at iteration", i, "replaced.")
+            line = data[i-1]
+        w.write(";".join([str(l) for l in line])+"\n")

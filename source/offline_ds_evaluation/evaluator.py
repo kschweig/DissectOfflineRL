@@ -61,7 +61,7 @@ class Evaluator():
 
     def evaluate(self, output=os.path.join("results", "ds_eval","test"), random_reward = 0, optimal_reward = 1,
                  epochs=10, batch_size=64, lr=1e-3,
-                 subsample=1., verbose=False):
+                 subsample=1., threshold=1, verbose=False):
 
         assert 0 <= subsample <= 1, f"subsample must be in [0;1] but is {subsample}."
 
@@ -75,13 +75,15 @@ class Evaluator():
         # normalize states
         self.states /= np.linalg.norm(self.states, axis=1, keepdims=True)
 
-        unique_states_episode = self.get_unique_states_episode()
-        unique_states = self.get_unique_states()
-
-        plot_histograms(output, rewards, ep_lengths, unique_states_episode, entropies, self.actions,
-                        sparsity)
+        unique_states_episode = self.get_unique_states_episode(threshold)
+        unique_states = self.get_unique_states(threshold)
 
         normalized_reward = self.get_normalized_rewards(rewards, random_reward, optimal_reward)
+
+        share_unique_states = [us / ep_lengths[i] for i, us in enumerate(unique_states_episode)]
+
+        plot_histograms(output, normalized_reward, ep_lengths, share_unique_states, entropies, self.actions,
+                        sparsity)
 
         print("-"*50)
         print("Min / Mean / Max Reward: \t\t", f"{round(np.min(rewards), 2)} / {round(np.mean(rewards), 2)} "
@@ -107,7 +109,8 @@ class Evaluator():
                 (np.mean(rewards), np.std(rewards)), (np.mean(normalized_reward), np.std(normalized_reward)),
                 (np.mean(entropies), np.std(entropies)),
                 (np.mean(ep_lengths), np.std(ep_lengths)), (np.mean(sparsity), np.std(sparsity)),
-                (np.mean(unique_states_episode), np.std(unique_states_episode)), unique_states]
+                (np.mean(unique_states_episode), np.std(unique_states_episode)),
+                (np.mean(share_unique_states), np.std(share_unique_states)), unique_states]
 
     def get_rewards(self):
 
@@ -168,7 +171,7 @@ class Evaluator():
 
         return entropies
 
-    def get_unique_states_episode(self, threshold=0.999):
+    def get_unique_states_episode(self, threshold=1):
         unique_states_episode, unique = [], []
         for i, done in tqdm(enumerate(self.dones),
                             desc=f"Search for Unique States per Episode ({self.environment} @ {self.buffer_type})",
@@ -179,7 +182,7 @@ class Evaluator():
 
             found = False
             for unique_state in unique:
-                if np.dot(self.states[i], unique_state) > threshold:
+                if np.dot(self.states[i], unique_state) >= threshold:
                     found = True
                     break
             if not found:
@@ -187,14 +190,14 @@ class Evaluator():
 
         return unique_states_episode
 
-    def get_unique_states(self, threshold=0.999):
+    def get_unique_states(self, threshold=1):
         unique = []
         for i, done in tqdm(enumerate(self.dones),
                             desc=f"Search for Unique States in whole dataset ({self.environment} @ {self.buffer_type})",
                             total=len(self.dones)):
             found = False
             for unique_state in unique:
-                if np.dot(self.states[i], unique_state) > threshold:
+                if np.dot(self.states[i], unique_state) >= threshold:
                     found = True
                     break
             if not found:

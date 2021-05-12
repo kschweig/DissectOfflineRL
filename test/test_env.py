@@ -22,11 +22,23 @@ If the lander moves away from the landing pad it loses reward. The episode finis
 comes to rest, receiving an additional -100 or +100 points. Each leg with ground contact is +10 points.
 Firing the main engine is -0.3 points each frame. Firing the side engine is -0.03 points each frame.
 Solved is 200 points. Episode until touching the ground.
+
+MiniGrid-LavaGapS6-v0:
+0 reward if connect with lava, 1 - 0.9 * (self.step_count / self.max_steps) if the end goal is reached.
+max_steps = 144
+min_steps = 7(if good env with gap on top)/8
+--> max_reward = 0.95625 / 0.94375s
+
+MiniGrid-SimpleCrossingS9N1-v0:
+1 - 0.9 * (self.step_count / self.max_steps) if the end goal is reached, 0 if not.
+max_steps = 324
+min_steps = 14
+--> max_reward = 0.961
 """
 envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0', 'LunarLander-v2']
 
-#env = gym.make(envs[3])
-env = FlatImgObsWrapper(gym.make('MiniGrid-SimpleCrossingS9N1-v0'))
+env = gym.make(envs[2])
+#env = FlatImgObsWrapper(gym.make('MiniGrid-LavaGapS6-v0'))
 obs = env.reset()
 print(env.observation_space.high)
 print(env.observation_space.low)
