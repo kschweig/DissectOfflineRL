@@ -4,9 +4,12 @@ import copy
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from torch.distributions import Categorical
 from .agent import Agent
 from ..utils.evaluation import entropy
 from ..networks.critic import Critic
+from ..networks.actor import Actor
 
 
 class CQL(Agent):
@@ -28,6 +31,7 @@ class CQL(Agent):
 
         # loss function
         self.huber = nn.SmoothL1Loss()
+        self.ce = nn.CrossEntropyLoss()
 
         # Number of training iterations
         self.iterations = 0
@@ -38,9 +42,10 @@ class CQL(Agent):
         # Q-Networks
         self.Q = Critic(self.obs_space, self.action_space, seed).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
+        self.actor = Actor(obs_space, action_space, seed).to(self.device)
 
         # Optimization
-        self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
+        self.optimizer = torch.optim.Adam(params=list(self.Q.parameters()) + list(self.actor.parameters()), lr=self.lr)
 
         # temperature parameter
         self.alpha = 0.01
@@ -66,11 +71,25 @@ class CQL(Agent):
 
     def train(self, buffer, writer, minimum=None, maximum=None, use_probas=False):
         # Sample replay buffer
-        state, action, next_state, next_action, reward, not_done = buffer.sample(minimum, maximum, use_probas, give_next_action=True)
+        state, action, next_state, reward, not_done = buffer.sample(minimum, maximum, use_probas)
 
         # set networks to train mode
         self.Q.train()
         self.Q_target.train()
+        self.actor.train()
+
+        ### Train behavioral policy
+
+        # predict action the behavioral policy would take
+        pred_action = self.actor(state)
+
+        # calculate CE-loss
+        ce_loss = self.ce(pred_action, action.squeeze(1))
+
+        # log cross entropy loss
+        writer.add_scalar("train/policy-loss", torch.mean(ce_loss).detach().cpu().item(), self.iterations)
+
+        ### Train main network
 
         # Compute the target Q value
         with torch.no_grad():
@@ -87,14 +106,20 @@ class CQL(Agent):
         writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
 
         # calculate regularizing loss
-        # use next_action as being sampled from the behavior distribution
-        R_loss = torch.mean(self.alpha * (torch.logsumexp(current_Qs, dim=1) - current_Qs.gather(1, next_action).squeeze(1)))
+        # use action as being sampled from the behavior distribution
+        with torch.no_grad():
+            b_action = self.actor(state)
+            b_action = F.log_softmax(b_action, dim=1)
+            dist = Categorical(logits=b_action)
+            b_action = dist.sample()
+        R_loss = torch.mean(self.alpha * (torch.logsumexp(current_Qs, dim=1) - current_Qs.gather(1, b_action).squeeze(1)))
 
         # log regularizer error
         writer.add_scalar("train/R-error", torch.mean(R_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q
         self.optimizer.zero_grad()
+        ce_loss.backward()
         (Q_loss + R_loss).backward()
         self.optimizer.step()
 

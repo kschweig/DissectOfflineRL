@@ -69,7 +69,7 @@ class BCQ(Agent):
                 actions = self.actor(state).cpu()
 
                 sm = F.log_softmax(actions, dim=1).exp()
-                mask = (sm / sm.max(1, keepdim=True)[0] > self.threshold).float()
+                mask = ((sm / sm.max(1, keepdim=True)[0]) > self.threshold).float()
 
                 # masking non-eligible values with -9e9 to be sure they are not sampled
                 return int((mask * q_val + (1. - mask) * -9e9).argmax(dim=1)), \
