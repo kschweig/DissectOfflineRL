@@ -1,8 +1,6 @@
 import numpy as np
 import torch
-from tqdm import tqdm
-from .utils import cosine_similarity
-from sklearn.decomposition import PCA
+
 
 class ReplayBuffer():
 
@@ -97,6 +95,21 @@ class ReplayBuffer():
         self.idx = 0
         self.current_size = samples
 
+    def mix(self, buffer, p_orig=0.5):
+        # check if target buffer is big enough
+        assert self.current_size >= buffer.current_size, \
+            f"Target buffer too small, must be >= {self.current_size}, is {buffer.current_size}"
+
+        self.subset(0, int(self.current_size * p_orig))
+        buffer.subset(int(self.current_size * (1 - p_orig)), self.current_size)
+
+        self.state = np.concatenate((self.state, buffer.state), axis=0)
+        self.action = np.concatenate((self.action, buffer.action), axis=0)
+        self.reward = np.concatenate((self.reward, buffer.reward), axis=0)
+        self.not_done = np.concatenate((self.not_done, buffer.not_done), axis=0)
+
+        self.current_size += buffer.current_size
+
     #####################################
     # Special functions for experiments #
     #####################################
@@ -112,4 +125,3 @@ class ReplayBuffer():
             self.remaining_reward[i] = cum_reward
             cum_reward *= discount
 
-        # TODO: make first visit MC possible

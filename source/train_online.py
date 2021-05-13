@@ -34,6 +34,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
     buffer = ReplayBuffer(obs_space, buffer_size, batch_size, seed=seed)
     er_buffer = ReplayBuffer(obs_space, transitions, batch_size, seed=seed)
     final_policy_buffer = ReplayBuffer(obs_space, transitions, batch_size, seed=seed)
+    noisy_policy_buffer = ReplayBuffer(obs_space, transitions, batch_size, seed=seed)
     random_buffer = ReplayBuffer(obs_space, transitions, batch_size, seed=seed)
 
     # seeding
@@ -131,6 +132,28 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
         pickle.dump(final_policy_buffer, f)
 
     #####################################
+    # generate noisy transitions from trained agent
+    #####################################
+    done, n_actions = True, env.action_space.n
+    # make agent noisy
+    agent.eval_eps = 0.2
+    for _ in tqdm(range(transitions), desc=f"Evaluate noisy final policy ({envid}), run {run}"):
+        if done:
+            state = env.reset()
+
+        action, _, _ = agent.policy(state, eval=True)
+
+        next_state, reward, done, _ = env.step(action)
+
+        noisy_policy_buffer.add(state, action, reward, done)
+
+        state = next_state
+
+    os.makedirs(os.path.join("data", f"ex{experiment}"), exist_ok=True)
+    with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{run}_noisy.pkl"), "wb") as f:
+        pickle.dump(noisy_policy_buffer, f)
+
+    #####################################
     # generate random transitions
     #####################################
     done, rng, n_actions  = True, np.random.default_rng(seed), env.action_space.n
@@ -147,6 +170,14 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
 
     os.makedirs(os.path.join("data", f"ex{experiment}"), exist_ok=True)
     with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{run}_random.pkl"), "wb") as f:
+        pickle.dump(random_buffer, f)
+
+    #####################################
+    # generate mixed transitions (random + fully)
+    #####################################
+    random_buffer.mix(buffer = final_policy_buffer, p_orig = 0.8)
+    os.makedirs(os.path.join("data", f"ex{experiment}"), exist_ok=True)
+    with open(os.path.join("data", f"ex{experiment}", f"{envid}_run{run}_mixed.pkl"), "wb") as f:
         pickle.dump(random_buffer, f)
 
     return agent

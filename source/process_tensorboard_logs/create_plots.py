@@ -16,8 +16,8 @@ with open(os.path.join("..", "..", "data", f"ex5", "metrics.pkl"), "rb") as f:
 
 # for reward normalisation
 envs = {'CartPole-v1':0, 'Acrobot-v1':1, "MiniGrid-LavaGapS6-v0":2, "MiniGrid-SimpleCrossingS9N1-v0":3}
-random_rewards = [0, -500, 0, 0]
-optimal_rewards = [500, -75, 0.95, 0.961]
+random_rewards = [0, -200, 0, 0]
+optimal_rewards = [500, -90, 0.95, 0.961]
 
 ####################################
 #       Usual Reward plots         #
@@ -29,7 +29,8 @@ mark = "reward"
 y_label = "Reward"
 x_label = "Update Steps"
 algos = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
-buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy"}
+buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy",
+          "mixed": "Mixed Policy", "noisy": "Noisy Final Policy"}
 
 def plt_csv(csv, algo):
     est = np.mean(csv, axis=1)
