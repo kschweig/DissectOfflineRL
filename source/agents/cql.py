@@ -111,7 +111,7 @@ class CQL(Agent):
             b_action = self.actor(state)
             b_action = F.log_softmax(b_action, dim=1)
             dist = Categorical(logits=b_action)
-            b_action = dist.sample()
+            b_action = dist.sample().reshape(-1,1)
         R_loss = torch.mean(self.alpha * (torch.logsumexp(current_Qs, dim=1) - current_Qs.gather(1, b_action).squeeze(1)))
 
         # log regularizer error
