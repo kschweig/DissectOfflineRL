@@ -100,8 +100,8 @@ class ReplayBuffer():
         assert self.current_size >= buffer.current_size, \
             f"Target buffer too small, must be >= {self.current_size}, is {buffer.current_size}"
 
+        buffer.subset(int(self.current_size * p_orig), self.current_size)
         self.subset(0, int(self.current_size * p_orig))
-        buffer.subset(int(self.current_size * (1 - p_orig)), self.current_size)
 
         self.state = np.concatenate((self.state, buffer.state), axis=0)
         self.action = np.concatenate((self.action, buffer.action), axis=0)
