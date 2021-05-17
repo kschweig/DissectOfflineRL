@@ -15,7 +15,7 @@ with open(os.path.join("..", "..", "data", f"ex5", "metrics.pkl"), "rb") as f:
     mm = pickle.load(f)
 
 # for reward normalisation
-envs = {'CartPole-v1':0, 'Acrobot-v1':1, "MiniGrid-LavaGapS6-v0":2, "MiniGrid-SimpleCrossingS9N1-v0":3}
+envs = {'CartPole-v1':0, 'MountainCar-v0':1, "MiniGrid-LavaGapS6-v0":2, "MiniGrid-SimpleCrossingS9N1-v0":3}
 random_rewards = [0, -200, 0, 0]
 optimal_rewards = [500, -90, 0.95, 0.961]
 
@@ -159,7 +159,7 @@ for metric in metrics.keys():
 
         for algo in algos:
             x, y = [], []
-            for mode in ["er", "fully", "random"]:
+            for mode in ["random", "mixed", "er", "noisy", "fully"]:
                 if metric == 7:
                     x.append(mm.get_data(env, mode)[metric])
                 else:
@@ -169,7 +169,7 @@ for metric in metrics.keys():
             plt.plot(x, y, "o-", label=algo)
 
         x, y = [], []
-        for mode in ["er", "fully", "random"]:
+        for mode in ["random", "mixed", "er", "noisy", "fully"]:
             if metric == 7:
                 x.append(mm.get_data(env, mode)[metric])
             else:
@@ -180,7 +180,7 @@ for metric in metrics.keys():
         plt.plot(x, y, "o-", linestyle="dotted", label="Behav.", color="black")
 
         xmax, xmin = 0, 9e9
-        for mode in ["er", "fully", "random"]:
+        for mode in ["random", "mixed", "er", "noisy", "fully"]:
             if metric == 7:
                 x = mm.get_data(env, mode)[metric]
             else:
