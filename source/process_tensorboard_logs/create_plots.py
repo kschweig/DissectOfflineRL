@@ -26,7 +26,7 @@ optimal_rewards = [500, -90, 0.95, 0.961]
 mark = "reward"
 
 # titles
-y_label = "Reward"
+y_label = "Normalized Reward"
 x_label = "Update Steps"
 algos = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
 buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy",
@@ -73,6 +73,10 @@ for file in files:
     if not data[env].keys() or mode not in data[env].keys():
         data[env][mode] = dict()
 
+    # normalize reward
+    csv -= random_rewards[envs[env]]
+    csv /= (optimal_rewards[envs[env]] - random_rewards[envs[env]])
+
     data[env][mode][algo] = csv
 
 for env in data.keys():
@@ -84,7 +88,9 @@ for env in data.keys():
         csv = data[env]["online"]["DQN"]
 
         plt.hlines(y=csv.max(), xmin=0, xmax=200000, color="black", linewidths=2, label="Online")
-        plt.hlines(y=mm.get_data(env, mode)[0][0], xmin=0, xmax=200000, color="black", linestyles="dotted",
+
+        norm = (mm.get_data(env, mode)[0][0] - random_rewards[envs[env]] ) / (optimal_rewards[envs[env]] - random_rewards[envs[env]])
+        plt.hlines(y=norm, xmin=0, xmax=200000, color="black", linestyles="dotted",
                    linewidths=2, label="Behav.")
 
         for algo in algos:
@@ -95,6 +101,7 @@ for env in data.keys():
         plt.legend(loc="lower right")
         plt.tight_layout()
         plt.savefig(os.path.join(outdir, env + "_" + mode + "." + image_type))
+        plt.close()
 
 
 #############################
@@ -144,10 +151,15 @@ for file in files:
     data[env][mode][algo] = (np.mean(csv, axis=1).max(), np.std(csv, axis=1)[np.argmax(np.mean(csv, axis=1))])
 
 ###############
-# plot reward
+# plot metrics + policy
 ###############
-metrics = {1:"Normalized Reward", 2:"Entropy", 3:"Episode Length", 5:"Unique States per Episode",
-           6:"Uniqueness", 7:"State Uniqueness"}
+metrics = {(1,0):"Normalized Reward (mean)", (1,1):"Normalized Reward (std)", (2,0):"Entropy (mean)",
+           (2,1):"Entropy (std)", (3,0):"Episode Length (mean)", (3,1):"Episode Length (std)",
+           (5,0):"Unique States per Episode (mean)", (5,1):"Unique States per Episode (std)",
+           (6,0):"Uniqueness (mean)", (6,1):"Uniqueness (std)", 7:"State Uniqueness"}
+
+annotations = ["(a)", "(b)", "(c)", "(d)", "(e)"]
+modes = ["random", "mixed", "er", "noisy", "fully"]
 
 for metric in metrics.keys():
     for env in envs:
@@ -159,40 +171,81 @@ for metric in metrics.keys():
 
         for algo in algos:
             x, y = [], []
-            for mode in ["random", "mixed", "er", "noisy", "fully"]:
+            for mode in modes:
                 if metric == 7:
                     x.append(mm.get_data(env, mode)[metric])
                 else:
-                    x.append(mm.get_data(env, mode)[metric][0])
+                    x.append(mm.get_data(env, mode)[metric[0]][metric[1]])
                 y.append(data[env][mode][algo][0])
             x, y = [list(tuple) for tuple in zip(*sorted(zip(x, y)))]
             plt.plot(x, y, "o-", label=algo)
 
         x, y = [], []
-        for mode in ["random", "mixed", "er", "noisy", "fully"]:
+        for mode in modes:
             if metric == 7:
                 x.append(mm.get_data(env, mode)[metric])
             else:
-                x.append(mm.get_data(env, mode)[metric][0])
+                x.append(mm.get_data(env, mode)[metric[0]][metric[1]])
             y.append(mm.get_data(env, mode)[1][0])
         x, y = [list(tuple) for tuple in zip(*sorted(zip(x, y)))]
 
         plt.plot(x, y, "o-", linestyle="dotted", label="Behav.", color="black")
 
         xmax, xmin = 0, 9e9
-        for mode in ["random", "mixed", "er", "noisy", "fully"]:
+        for m, mode in enumerate(modes):
             if metric == 7:
                 x = mm.get_data(env, mode)[metric]
             else:
-                x = mm.get_data(env, mode)[metric][0]
+                x = mm.get_data(env, mode)[metric[0]][metric[1]]
             xmin = x if x < xmin else xmin
             xmax = x if x > xmax else xmax
-            plt.text(x, 0.5, buffer[mode]+"\n", rotation="vertical", ha="center", va="center", linespacing=1.5)
+            plt.text(x, -0.035, annotations[m], ha="center")
 
         plt.xlim(right=xmax + (xmax - xmin) * 0.18)
+
+        # Online Policy
+        csv = data[env]["online"]["DQN"]
+        plt.hlines(y=csv[0], xmin=xmin, xmax=xmax, color="black", linewidths=2, label="Online")
 
         plt.legend(loc="upper right", fontsize="x-small", markerscale=0.7, handlelength=1.5)
         plt.tight_layout()
         plt.savefig(os.path.join(outdir, env + "_" + metrics[metric] + "." + image_type))
+        plt.close()
+
+    # plot for modes
+    for env in envs:
+        plt.figure(figsize=(8, 6))
+        plt.ylim(bottom=-0.05, top=1.05)
+        plt.ylabel("Normalized Reward (Dataset)")
+        plt.xlabel("Buffer Type")
+        plt.title(env)
+
+        for algo in algos:
+            x, y = [], []
+            for m, mode in enumerate(modes):
+                x.append(m)
+                y.append(data[env][mode][algo][0])
+            x, y = [list(tuple) for tuple in zip(*sorted(zip(x, y)))]
+            plt.plot(x, y, "o-", label=algo)
+
+        x, y = [], []
+        for m, mode in enumerate(modes):
+            x.append(m)
+            y.append(mm.get_data(env, mode)[1][0])
+        x, y = [list(tuple) for tuple in zip(*sorted(zip(x, y)))]
+
+        plt.plot(x, y, "o-", linestyle="dotted", label="Behav.", color="black")
+
+        plt.xlim(right=max(x) + (max(x) - min(x)) * 0.18)
+
+        # Online Policy
+        csv = data[env]["online"]["DQN"]
+        plt.hlines(y=csv[0], xmin=0, xmax=len(modes) - 1, color="black", linewidths=2, label="Online")
+
+        plt.xticks(range(len(modes)), [buffer[m] for m in modes], fontsize="small")
+
+        plt.legend(loc="upper right", fontsize="x-small", markerscale=0.7, handlelength=1.5)
+        plt.tight_layout()
+        plt.savefig(os.path.join(outdir, env + "_buffertypes" + "." + image_type))
         plt.close()
 
