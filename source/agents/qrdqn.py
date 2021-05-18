@@ -75,8 +75,9 @@ class QRDQN(Agent):
 
         # Compute the target Q value
         with torch.no_grad():
-            target_Qs = self.Q_target(next_state)
+            target_Qs = self.Q(next_state)
             action_indices = torch.argmax(target_Qs.mean(dim=2), dim=1, keepdim=True)
+            target_Qs = self.Q_target(next_state)
             target_Qs = target_Qs.gather(1, action_indices.unsqueeze(2).expand(-1, 1, self.quantiles))
             target_Qs = reward.unsqueeze(1) + not_done.unsqueeze(1) * self.discount * target_Qs
 

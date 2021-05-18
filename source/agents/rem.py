@@ -71,7 +71,9 @@ class REM(Agent):
 
         # Compute the target Q value
         with torch.no_grad():
-            target_Q = reward + not_done * self.discount * self.Q_target(next_state).max(1, keepdim=True)[0]
+            q_val = self.Q(next_state)
+            next_action = q_val.argmax(dim=1, keepdim=True)
+            target_Q = reward + not_done * self.discount * self.Q_target(next_state).gather(1, next_action)
 
         # Get current Q estimate
         current_Q = self.Q(state).gather(1, action)

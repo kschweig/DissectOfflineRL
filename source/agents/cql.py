@@ -48,7 +48,7 @@ class CQL(Agent):
         self.optimizer = torch.optim.Adam(params=list(self.Q.parameters()) + list(self.actor.parameters()), lr=self.lr)
 
         # temperature parameter
-        self.alpha = 0.01
+        self.alpha = 0.1
 
     def policy(self, state, eval=False):
 
@@ -93,7 +93,9 @@ class CQL(Agent):
 
         # Compute the target Q value
         with torch.no_grad():
-            target_Q = reward + not_done * self.discount * self.Q_target(next_state).max(1, keepdim=True)[0]
+            q_val = self.Q(next_state)
+            next_action = q_val.argmax(dim=1, keepdim=True)
+            target_Q = reward + not_done * self.discount * self.Q_target(next_state).gather(1, next_action)
 
         # Get current Q estimate
         current_Qs = self.Q(state)
