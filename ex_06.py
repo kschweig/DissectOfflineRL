@@ -10,13 +10,13 @@ import numpy as np
 
 
 # project parameters
-envs = ['CartPole-v1', 'MountainCar-v0', "MiniGrid-LavaGapS6-v0", "MiniGrid-SimpleCrossingS9N1-v0"]
-discounts = [0.99, 0.99, 0.95, 0.95]
+envs = ['MountainCar-v0', "MiniGrid-LavaGapS6-v0"]
+discounts = [0.99, 0.95]
 buffer_types = ["random", "mixed", "er", "noisy", "fully"]
-agent_types = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CRR", "CQL"]
-multiple_runs = 1
+agent_types = ["BC", "DQN", "BCQ", "CQL", "CRR"]
+multiple_runs = 5
 # experiment parameters
-experiment = 5
+experiment = 6
 seed = 42
 # hyperparameters for online training
 behavioral = "DQN"
@@ -26,8 +26,8 @@ transitions_offline = 2 * transitions_online
 batch_size = 128
 lr = [1e-4] * len(agent_types)
 # parameters for evaluation
-random_rewards = [0, -200, 0, 0]
-optimal_rewards = [500, -90, 0.95, 0.961]
+random_rewards = [-200, 0]
+optimal_rewards = [-90, 0.95]
 
 
 def create_ds(args):
@@ -61,12 +61,12 @@ def assess_ds(args):
     return evaluator.evaluate(path, random_reward, optimal_reward, threshold=0.999, epochs=5)
 
 if __name__ == '__main__':
-    """
+
     with Pool(len(envs), maxtasksperchild=1) as p:
         p.map(create_ds, zip(envs, discounts))
         p.map(train, zip(envs, discounts))
 
-    """
+
     # assess all datasets
     results = []
     mm = MetricsManager(experiment)
@@ -83,4 +83,5 @@ if __name__ == '__main__':
 
     with open(os.path.join("data", f"ex{experiment}", "metrics.pkl"), "wb") as f:
         pickle.dump(mm, f)
+
 

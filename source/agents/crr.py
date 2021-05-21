@@ -40,6 +40,7 @@ class CRR(Agent):
 
         # policy network
         self.actor = Actor(self.obs_space, self.action_space, seed).to(self.device)
+        self.actor_target = copy.deepcopy(self.actor)
 
         # huber loss
         self.huber = nn.SmoothL1Loss()
@@ -117,12 +118,13 @@ class CRR(Agent):
 
         # set networks to train mode
         self.actor.train()
+        self.actor_target.train()
         self.Q.train()
         self.Q_target.train()
 
         # Compute the target Q value
         with torch.no_grad():
-            actions = self.actor(next_state)
+            actions = self.actor_target(next_state)
             actions = F.log_softmax(actions, dim=1)
             dist = Categorical(logits=actions)
             target_Q = reward + not_done * self.discount * self.Q_target(next_state).gather(1, dist.sample().unsqueeze(1))
@@ -145,6 +147,7 @@ class CRR(Agent):
         # Update target network by full copy every X iterations.
         if self.iterations % self.target_update_freq == 0:
             self.Q_target.load_state_dict(self.Q.state_dict())
+            self.actor_target.load_state_dict(self.actor.state_dict())
 
     def get_name(self) -> str:
         return "CriticRegularizedRegression"

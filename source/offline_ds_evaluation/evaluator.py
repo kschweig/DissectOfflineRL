@@ -203,7 +203,7 @@ class Evaluator():
             if not found:
                 unique.append(self.states[i])
 
-        return len(unique) / len(self.states)
+        return len(unique)
 
     def train_behavior_policy(self, epochs=10, batch_size=64, lr=1e-3, verbose=False):
 

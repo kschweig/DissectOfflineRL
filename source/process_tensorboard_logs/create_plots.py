@@ -158,7 +158,7 @@ metrics = {(1,0):"Normalized Reward (mean)", (1,1):"Normalized Reward (std)", (2
            (5,0):"Unique States per Episode (mean)", (5,1):"Unique States per Episode (std)",
            (6,0):"Uniqueness (mean)", (6,1):"Uniqueness (std)", 7:"State Uniqueness"}
 
-annotations = ["(a)", "(b)", "(c)", "(d)", "(e)"]
+annotations = ["(R)", "(M)", "(ER)", "(N)", "(F)"]
 modes = ["random", "mixed", "er", "noisy", "fully"]
 
 for metric in metrics.keys():
