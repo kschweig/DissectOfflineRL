@@ -47,7 +47,7 @@ def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discoun
 
     writer = SummaryWriter(log_dir=os.path.join("runs", f"ex{experiment}", f"{envid}", f"{buffer_type}", f"{agent_type}", f"run{run}"))
 
-    all_rewards = []
+    all_rewards, all_dev_mean, all_dev_std = [], [], []
 
     for iter in tqdm(range(transitions), desc=f"{agent_type} ({envid}) {buffer_type}, run {run}"):
         if use_progression:
@@ -60,7 +60,8 @@ def train_offline(experiment, envid, agent_type="DQN", buffer_type="er", discoun
         agent.train(buffer, writer, maximum, minimum)
 
         if (iter+1) % evaluate_every == 0:
-            evaluate(env, agent, writer, all_rewards, over_episodes=mean_over)
+            all_rewards, all_dev_mean, all_dev_std = evaluate(env, agent, writer, all_rewards,
+                                                              all_dev_mean, all_dev_std, over_episodes=mean_over)
 
 
     return agent

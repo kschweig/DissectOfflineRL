@@ -4,9 +4,9 @@ def create_latex_table(path, arguments):
 
     environment = {"MiniGrid-LavaGapS6-v0": "lava", "MiniGrid-SimpleCrossingS9N1-v0": "simple",
                    "CartPole-v1": "cartpole", "Acrobot-v1":"acrobot", "MountainCar-v0": "mountaincar"}
-    buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy",
-              "mixed": "Mixed Policy", "noisy": "Noisy Final Policy"}
-    results = ["Reward", "Reward (Norm.)", "Entropy (Norm.)", "Episode Length", "Sparsity",
+    buffer = {"er": "Exp. Replay", "fully": "Final Policy", "random": "Random Policy",
+              "mixed": "Mixed Policy", "noisy": "Noisy Policy"}
+    results = ["Reward", "Reward (Norm.)", "Entropy (Norm.)", "Sparsity", "Episode Length",
                "Unique States / Ep.", "Uniqueness", "Unique States"]
 
     with open(path, "w") as f:

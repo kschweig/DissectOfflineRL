@@ -73,7 +73,6 @@ class CRR(Agent):
                 actions = F.softmax(actions, dim=1)
                 dist = Categorical(actions.unsqueeze(0))
 
-                #return q_val.argmax().item(), q_val, entropy(actions)
                 return dist.sample().item(), q_val, entropy(actions)
         else:
             return self.rng.integers(self.action_space), np.nan, np.nan
@@ -88,6 +87,7 @@ class CRR(Agent):
 
         # set networks to train mode
         self.actor.train()
+        self.actor_target.train()
         self.Q.train()
         self.Q_target.train()
 
@@ -101,11 +101,12 @@ class CRR(Agent):
 
         # policy loss
         # exp style
-        #loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
+        loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
         # binary style
-        loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
+        # loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
 
-        writer.add_scalar("train/policy-loss", torch.mean(loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/policy-loss", torch.mean(loss).detach().cpu().item(), self.iterations)
 
         # optimize policy
         self.p_optim.zero_grad()
@@ -125,9 +126,8 @@ class CRR(Agent):
         # Compute the target Q value
         with torch.no_grad():
             actions = self.actor_target(next_state)
-            actions = F.log_softmax(actions, dim=1)
-            dist = Categorical(logits=actions)
-            target_Q = reward + not_done * self.discount * self.Q_target(next_state).gather(1, dist.sample().unsqueeze(1))
+            probs = F.softmax(actions, dim=1)
+            target_Q = reward + not_done * self.discount * (self.Q_target(next_state) * probs).sum(dim=1, keepdim=True)
 
         # Get current Q estimate
         current_Q = self.Q(state).gather(1, action)
@@ -136,7 +136,8 @@ class CRR(Agent):
         Q_loss = self.huber(current_Q, target_Q)
 
         # log temporal difference error
-        writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q
         self.optimizer.zero_grad()

@@ -11,7 +11,7 @@ from .utils.evaluation import evaluate
 from .utils.utils import get_agent, make_env
 
 
-def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1', transitions=200000,
+def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1', transitions=100000,
                  buffer_size=50000, run=1, seed=42):
 
     # keep training parameters for online training fixed, the experiment does not interfere here.
@@ -44,7 +44,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
     torch.manual_seed(seed)
 
     ep_rewards = []
-    all_rewards = []
+    all_rewards, all_dev_mean, all_dev_std = [], [], []
     done = True
     ep = 0
 
@@ -102,7 +102,8 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
 
         # test agent on environment if executed greedily
         if (iteration+1) % evaluate_every == 0:
-            all_rewards = evaluate(eval_env, agent, writer, all_rewards, over_episodes=mean_over)
+            all_rewards, all_dev_mean, all_dev_std = evaluate(eval_env, agent, writer, all_rewards,
+                                                              all_dev_mean, all_dev_std, over_episodes=mean_over)
 
     # save ER-buffer for offline training
     os.makedirs(os.path.join("data", f"ex{experiment}"), exist_ok=True)

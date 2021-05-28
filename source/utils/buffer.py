@@ -71,9 +71,10 @@ class ReplayBuffer():
     def set_seed(self, seed):
         self.rng = np.random.default_rng(seed=seed)
 
-    def subset(self, minimum, maximum):
-        self.state = self.state[minimum:maximum+1]
-        self.action = self.action[minimum:maximum+1]
+    def subset(self, minimum, maximum, retain_last=True):
+        add = 1 if retain_last else 0
+        self.state = self.state[minimum:maximum+add]
+        self.action = self.action[minimum:maximum+add]
         self.reward = self.reward[minimum:maximum]
         self.not_done = self.not_done[minimum:maximum]
 
@@ -101,7 +102,7 @@ class ReplayBuffer():
             f"Target buffer too small, must be >= {self.current_size}, is {buffer.current_size}"
 
         buffer.subset(int(self.current_size * p_orig), self.current_size)
-        self.subset(0, int(self.current_size * p_orig))
+        self.subset(0, int(self.current_size * p_orig), retain_last=False)
 
         self.state = np.concatenate((self.state, buffer.state), axis=0)
         self.action = np.concatenate((self.action, buffer.action), axis=0)

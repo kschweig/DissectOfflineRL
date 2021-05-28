@@ -102,13 +102,13 @@ class Evaluator():
         print("Min / Mean / Max Unique States per Episode: \t", f"{round(np.min(unique_states_episode), 2)} / "
                                                f"{round(np.mean(unique_states_episode), 2)} "
                                                f"/ {round(np.max(unique_states_episode), 2)}")
-        print("Share of unique states in dataset: \t", f"{round(unique_states, 5)}")
+        print("Unique states in dataset: \t", f"{round(unique_states, 5)}")
         print("-" * 50)
 
         return [self.environment, self.buffer_type,
                 (np.mean(rewards), np.std(rewards)), (np.mean(normalized_reward), np.std(normalized_reward)),
                 (np.mean(entropies), np.std(entropies)),
-                (np.mean(ep_lengths), np.std(ep_lengths)), (np.mean(sparsity), np.std(sparsity)),
+                (np.mean(sparsity), np.std(sparsity)), (np.mean(ep_lengths), np.std(ep_lengths)),
                 (np.mean(unique_states_episode), np.std(unique_states_episode)),
                 (np.mean(share_unique_states), np.std(share_unique_states)), unique_states]
 

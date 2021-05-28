@@ -87,7 +87,8 @@ class CQL(Agent):
         ce_loss = self.ce(pred_action, action.squeeze(1))
 
         # log cross entropy loss
-        writer.add_scalar("train/policy-loss", torch.mean(ce_loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/policy-loss", torch.mean(ce_loss).detach().cpu().item(), self.iterations)
 
         ### Train main network
 
@@ -105,19 +106,19 @@ class CQL(Agent):
         Q_loss = self.huber(current_Q, target_Q)
 
         # log temporal difference error
-        writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
 
         # calculate regularizing loss
         # use action as being sampled from the behavior distribution
         with torch.no_grad():
             b_action = self.actor(state)
-            b_action = F.log_softmax(b_action, dim=1)
-            dist = Categorical(logits=b_action)
-            b_action = dist.sample().reshape(-1,1)
-        R_loss = torch.mean(self.alpha * (torch.logsumexp(current_Qs, dim=1) - current_Qs.gather(1, b_action).squeeze(1)))
+            sm = F.softmax(b_action, dim=1)
+        R_loss = torch.mean(self.alpha * (torch.logsumexp(current_Qs, dim=1) - (current_Qs * sm).sum(dim=1)))
 
         # log regularizer error
-        writer.add_scalar("train/R-error", torch.mean(R_loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/R-error", torch.mean(R_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q
         self.optimizer.zero_grad()

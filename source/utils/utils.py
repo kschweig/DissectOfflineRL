@@ -12,7 +12,7 @@ from ..agents.evmcp import EVMCP
 from ..agents.crr import CRR
 from ..agents.cql import CQL
 from ..agents.bc import BehavioralCloning
-from ..agents.bve import BehavioralValueEstimation
+from ..agents.bve import BVE
 from ..agents.random import Random
 
 
@@ -36,7 +36,7 @@ def get_agent(agent_type, obs_space, num_actions, discount, lr, seed):
     elif agent_type == "BC":
         return BehavioralCloning(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "BVE":
-        return BehavioralValueEstimation(obs_space, num_actions, discount, lr, seed=seed)
+        return BVE(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "Random":
         return Random(obs_space, num_actions, discount, lr, seed=seed)
     else:

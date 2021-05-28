@@ -11,14 +11,19 @@ sns.set()
 image_type = "png"
 
 # metric manager
-with open(os.path.join("..", "..", "data", f"ex5", "metrics.pkl"), "rb") as f:
+with open(os.path.join("..", "..", "data", f"ex6", "metrics.pkl"), "rb") as f:
     mm = pickle.load(f)
 
 # for reward normalisation
+
+envs = {'CartPole-v1':0, "MiniGrid-LavaGapS6-v0":1}
+random_rewards = [0, 0]
+optimal_rewards = [500, 0.95]
+"""
 envs = {'CartPole-v1':0, 'MountainCar-v0':1, "MiniGrid-LavaGapS6-v0":2, "MiniGrid-SimpleCrossingS9N1-v0":3}
 random_rewards = [0, -200, 0, 0]
 optimal_rewards = [500, -90, 0.95, 0.961]
-
+"""
 ####################################
 #       Usual Reward plots         #
 ####################################
@@ -28,7 +33,8 @@ mark = "reward"
 # titles
 y_label = "Normalized Reward"
 x_label = "Update Steps"
-algos = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
+#algos = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
+algos = ["BC", "DQN", "BCQ", "CQL", "CRR"]
 buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy",
           "mixed": "Mixed Policy", "noisy": "Noisy Final Policy"}
 
@@ -103,12 +109,6 @@ for env in data.keys():
         plt.savefig(os.path.join(outdir, env + "_" + mode + "." + image_type))
         plt.close()
 
-
-#############################
-#       Value plots         #
-#############################
-
-
 #############################
 #        Comparisons        #
 #############################
@@ -139,6 +139,9 @@ for file in files:
     if len(csv.shape) == 1:
         csv = csv.reshape(-1, 1)
 
+    # first hundred invalid, as they are not the correct sma!
+    csv = csv[100:]
+
     if not data.keys() or env not in data.keys():
         data[env] = dict()
     if not data[env].keys() or mode not in data[env].keys():
@@ -154,9 +157,9 @@ for file in files:
 # plot metrics + policy
 ###############
 metrics = {(1,0):"Normalized Reward (mean)", (1,1):"Normalized Reward (std)", (2,0):"Entropy (mean)",
-           (2,1):"Entropy (std)", (3,0):"Episode Length (mean)", (3,1):"Episode Length (std)",
+           (2,1):"Entropy (std)", (4,0):"Episode Length (mean)", (4,1):"Episode Length (std)",
            (5,0):"Unique States per Episode (mean)", (5,1):"Unique States per Episode (std)",
-           (6,0):"Uniqueness (mean)", (6,1):"Uniqueness (std)", 7:"State Uniqueness"}
+           (6,0):"Uniqueness (mean)", (6,1):"Uniqueness (std)", 7:"Unique States"}
 
 annotations = ["(R)", "(M)", "(ER)", "(N)", "(F)"]
 modes = ["random", "mixed", "er", "noisy", "fully"]
@@ -165,19 +168,24 @@ for metric in metrics.keys():
     for env in envs:
         plt.figure(figsize=(8, 6))
         plt.ylim(bottom=-0.05, top=1.05)
-        plt.ylabel("Normalized Reward (Dataset)")
+        plt.ylabel("Normalized Reward")
         plt.xlabel(metrics[metric])
         plt.title(env)
 
         for algo in algos:
-            x, y = [], []
+            x, y, sd = [], [], []
             for mode in modes:
                 if metric == 7:
                     x.append(mm.get_data(env, mode)[metric])
                 else:
                     x.append(mm.get_data(env, mode)[metric[0]][metric[1]])
                 y.append(data[env][mode][algo][0])
-            x, y = [list(tuple) for tuple in zip(*sorted(zip(x, y)))]
+                sd.append(data[env][mode][algo][1])
+
+            x, y, sd = [list(tuple) for tuple in zip(*sorted(zip(x, y, sd)))]
+
+            cis = (np.asarray(y) - np.asarray(sd), np.asarray(y) + np.asarray(sd))
+            plt.fill_between(x, cis[0], cis[1], alpha=0.2)
             plt.plot(x, y, "o-", label=algo)
 
         x, y = [], []
@@ -191,7 +199,7 @@ for metric in metrics.keys():
 
         plt.plot(x, y, "o-", linestyle="dotted", label="Behav.", color="black")
 
-        xmax, xmin = 0, 9e9
+        xmax, xmin, x_ = 0, 9e9, []
         for m, mode in enumerate(modes):
             if metric == 7:
                 x = mm.get_data(env, mode)[metric]
@@ -199,6 +207,22 @@ for metric in metrics.keys():
                 x = mm.get_data(env, mode)[metric[0]][metric[1]]
             xmin = x if x < xmin else xmin
             xmax = x if x > xmax else xmax
+            x_.append(x)
+
+        # adjust markings if they overlap! do multiple times to be sure
+        for _ in range(10):
+            adjusted, no_changes = [], True
+            for i in range(len(x_)):
+                for j in range(len(x_)):
+                    if i != j and i not in adjusted and abs(x_[i] - x_[j]) < 0.04 * (xmax - xmin):
+                        x_[i] -= 0.02 * (xmax - xmin)
+                        x_[j] += 0.02 * (xmax - xmin)
+                        adjusted.append(j)
+                        no_changes = False
+            if no_changes:
+                break
+
+        for m, x in enumerate(x_):
             plt.text(x, -0.035, annotations[m], ha="center")
 
         plt.xlim(right=xmax + (xmax - xmin) * 0.18)
@@ -221,11 +245,15 @@ for metric in metrics.keys():
         plt.title(env)
 
         for algo in algos:
-            x, y = [], []
+            x, y, sd = [], [], []
             for m, mode in enumerate(modes):
                 x.append(m)
                 y.append(data[env][mode][algo][0])
-            x, y = [list(tuple) for tuple in zip(*sorted(zip(x, y)))]
+                sd.append(data[env][mode][algo][1])
+            x, y, sd = [list(tuple) for tuple in zip(*sorted(zip(x, y, sd)))]
+
+            cis = (np.asarray(y) - np.asarray(sd), np.asarray(y) + np.asarray(sd))
+            plt.fill_between(x, cis[0], cis[1], alpha=0.2)
             plt.plot(x, y, "o-", label=algo)
 
         x, y = [], []

@@ -129,6 +129,9 @@ dmypy.json
 .pyre/
 
 /runs
-/data
+/data/*/*_random.pkl
+/data/*/*_er.pkl
+/data/*/*_mixed.pkl
+/data/*/*_noisy.pkl
+/data/*/*_fully.pkl
 /models
-/results/csv

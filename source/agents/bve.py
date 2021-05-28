@@ -9,7 +9,7 @@ from ..utils.evaluation import entropy
 from ..networks.critic import Critic
 
 
-class BehavioralValueEstimation(Agent):
+class BVE(Agent):
 
     def __init__(self,
                  obs_space,
@@ -17,7 +17,7 @@ class BehavioralValueEstimation(Agent):
                  discount,
                  lr=1e-4,
                  seed=None):
-        super(BehavioralValueEstimation, self).__init__(obs_space, action_space, discount, lr, seed)
+        super(BVE, self).__init__(obs_space, action_space, discount, lr, seed)
 
         # epsilon decay
         self.initial_eps = 1.0
@@ -78,7 +78,8 @@ class BehavioralValueEstimation(Agent):
         Q_loss = self.huber(current_Q, target_Q)
 
         # log temporal difference error
-        writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q
         self.optimizer.zero_grad()

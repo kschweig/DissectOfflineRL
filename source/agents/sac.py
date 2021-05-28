@@ -112,8 +112,9 @@ class SAC(Agent):
         Q2_loss = self.huber(current_Q2, target_Q)
 
         # log temporal difference error
-        writer.add_scalar("train/TD-error 1", torch.mean(Q1_loss).detach().cpu().item(), self.iterations)
-        writer.add_scalar("train/TD-error 2", torch.mean(Q2_loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/TD-error 1", torch.mean(Q1_loss).detach().cpu().item(), self.iterations)
+            writer.add_scalar("train/TD-error 2", torch.mean(Q2_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q's
         self.Q_optimizer.zero_grad()
@@ -133,7 +134,8 @@ class SAC(Agent):
         policy_loss = policy_loss.sum(dim=1).mean()
 
         # log policy loss
-        writer.add_scalar("train/policy-loss", torch.mean(policy_loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/policy-loss", torch.mean(policy_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the policy
         self.actor_optimizer.zero_grad()
@@ -157,8 +159,9 @@ class SAC(Agent):
         self.alpha = self.log_alpha.exp()
 
         # log alpha loss
-        writer.add_scalar("train/alpha", self.alpha.detach().cpu().item(), self.iterations)
-        writer.add_scalar("train/alpha-loss", torch.mean(alpha_loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/alpha", self.alpha.detach().cpu().item(), self.iterations)
+            writer.add_scalar("train/alpha-loss", torch.mean(alpha_loss).detach().cpu().item(), self.iterations)
 
 
 

@@ -108,8 +108,9 @@ class BCQ(Agent):
         loss = Q_loss + A_loss + 1e-2 * actions.pow(2).mean()
 
         # log temporal difference error
-        writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
-        writer.add_scalar("train/CE-loss", torch.mean(A_loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
+            writer.add_scalar("train/CE-loss", torch.mean(A_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q
         self.optimizer.zero_grad()

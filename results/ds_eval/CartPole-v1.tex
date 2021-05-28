@@ -1,0 +1,16 @@
+\begin{table}[h]
+\centering
+\begin{tabular}{l|ccccc}
+Metric  \hspace{2pt} \symbol{92} \hspace{2pt} Buffer Type & Random Policy & Mixed Policy & Exp. Replay & Noisy Policy & Final Policy \\ \hline 
+Reward & $22.20 \pm 12.06$ & $27.22 \pm 50.35$ & $201.69 \pm 133.61$ & $227.58 \pm 211.42$ & $490.80 \pm 40.54$\\ 
+Reward (Norm.) & $0.00 \pm 0.03$ & $0.02 \pm 0.10$ & $0.38 \pm 0.28$ & $0.43 \pm 0.44$ & $0.98 \pm 0.08$\\ 
+Entropy (Norm.) & $1.00 \pm 0.00$ & $0.90 \pm 0.26$ & $0.85 \pm 0.18$ & $0.66 \pm 0.17$ & $0.18 \pm 0.30$\\ 
+Sparsity & $0.00 \pm 0.00$ & $0.00 \pm 0.00$ & $0.00 \pm 0.00$ & $0.00 \pm 0.00$ & $0.00 \pm 0.00$\\ 
+Episode Length & $22.20 \pm 12.06$ & $27.22 \pm 50.35$ & $201.69 \pm 133.61$ & $227.58 \pm 211.42$ & $490.80 \pm 40.54$\\ 
+Unique States / Ep. & $15.78 \pm 10.91$ & $16.58 \pm 13.86$ & $140.87 \pm 93.60$ & $73.03 \pm 50.45$ & $101.81 \pm 3.55$\\ 
+Uniqueness & $0.67 \pm 0.12$ & $0.66 \pm 0.13$ & $0.72 \pm 0.10$ & $0.53 \pm 0.25$ & $0.21 \pm 0.03$\\ 
+Unique States & $16852$ & $14843$ & $18698$ & $3861$ & $1769$\\ 
+\end{tabular}
+\caption{Dataset evaluation metrics for all buffer types of environment 'CartPole-v1'.}
+\label{tab:ds_eval_cartpole}
+\end{table}

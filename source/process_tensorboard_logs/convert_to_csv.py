@@ -10,7 +10,7 @@ import re
 # Which experiment to extract
 import tensorflow.python.framework.errors_impl
 
-ex = "ex5"
+ex = "ex6"
 # Which tag should be extracted
 #'eval/Reward (SMA)' 'eval/Entropy'
 tag = 'eval/Reward (SMA)'
@@ -38,12 +38,15 @@ for file in files:
     if run == 1 and data != []:
         with open(os.path.join(outpath, f"{env}_{mode}_{algo}.csv"), "w") as w:
             minlen = len(data[0])
+            last_full = 0
             for i, line in enumerate(data):
                 if len(line) < minlen:
                     # seldom, there occurs the phenomenon that the last reward in the tffiles cannot be read.
                     # Then replace all with the values read before. Only a minor difference on 2k iterations.
                     print("Datapoint at iteration", i, "replaced.")
-                    line = data[i - 1]
+                    line = data[last_full - 1]
+                else:
+                    last_full = i
                 w.write(";".join([str(l) for l in line]) + "\n")
         data = []
 

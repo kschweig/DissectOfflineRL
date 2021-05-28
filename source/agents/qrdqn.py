@@ -107,8 +107,9 @@ class QRDQN(Agent):
         quantile_loss = quantile_loss.sum(dim=1).mean(dim=1).mean()
 
         # log temporal difference error and quantile loss
-        writer.add_scalar("train/TD-error", torch.mean(huber_l).detach().cpu().item(), self.iterations)
-        writer.add_scalar("train/quantile_loss", torch.mean(quantile_loss).detach().cpu().item(), self.iterations)
+        if self.iterations % 100 == 0:
+            writer.add_scalar("train/TD-error", torch.mean(huber_l).detach().cpu().item(), self.iterations)
+            writer.add_scalar("train/quantile_loss", torch.mean(quantile_loss).detach().cpu().item(), self.iterations)
 
         # Optimize the Q
         self.optimizer.zero_grad()
