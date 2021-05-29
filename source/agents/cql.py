@@ -42,10 +42,9 @@ class CQL(Agent):
         # Q-Networks
         self.Q = Critic(self.obs_space, self.action_space, seed).to(self.device)
         self.Q_target = copy.deepcopy(self.Q)
-        self.actor = Actor(obs_space, action_space, seed).to(self.device)
 
         # Optimization
-        self.optimizer = torch.optim.Adam(params=list(self.Q.parameters()) + list(self.actor.parameters()), lr=self.lr)
+        self.optimizer = torch.optim.Adam(params=self.Q.parameters(), lr=self.lr)
 
         # temperature parameter
         self.alpha = 0.1
@@ -76,19 +75,6 @@ class CQL(Agent):
         # set networks to train mode
         self.Q.train()
         self.Q_target.train()
-        self.actor.train()
-
-        ### Train behavioral policy
-
-        # predict action the behavioral policy would take
-        pred_action = self.actor(state)
-
-        # calculate CE-loss
-        ce_loss = self.ce(pred_action, action.squeeze(1))
-
-        # log cross entropy loss
-        if self.iterations % 100 == 0:
-            writer.add_scalar("train/policy-loss", torch.mean(ce_loss).detach().cpu().item(), self.iterations)
 
         ### Train main network
 
@@ -110,11 +96,7 @@ class CQL(Agent):
             writer.add_scalar("train/TD-error", torch.mean(Q_loss).detach().cpu().item(), self.iterations)
 
         # calculate regularizing loss
-        # use action as being sampled from the behavior distribution
-        with torch.no_grad():
-            b_action = self.actor(state)
-            sm = F.softmax(b_action, dim=1)
-        R_loss = torch.mean(self.alpha * (torch.logsumexp(current_Qs, dim=1) - (current_Qs * sm).sum(dim=1)))
+        R_loss = torch.mean(self.alpha * (torch.logsumexp(current_Qs, dim=1) - current_Qs.gather(1, action).squeeze(1)))
 
         # log regularizer error
         if self.iterations % 100 == 0:
@@ -122,7 +104,6 @@ class CQL(Agent):
 
         # Optimize the Q
         self.optimizer.zero_grad()
-        ce_loss.backward()
         (Q_loss + R_loss).backward()
         self.optimizer.step()
 

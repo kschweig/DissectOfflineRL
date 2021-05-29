@@ -13,8 +13,8 @@ import numpy as np
 envs = ['CartPole-v1', "MiniGrid-LavaGapS6-v0"]
 discounts = [0.95, 0.95]
 buffer_types = ["random", "mixed", "er", "noisy", "fully"]
-agent_types = ["CRR", "CQL"]
-multiple_runs = 5
+agent_types = ["BC", "DQN", "BCQ", "CRR", "CQL"]
+multiple_runs = 3
 # experiment parameters
 experiment = 6
 seed = 42
@@ -63,10 +63,10 @@ def assess_ds(args):
 if __name__ == '__main__':
 
     with Pool(len(envs), maxtasksperchild=1) as p:
-        #p.map(create_ds, zip(envs, discounts))
+        p.map(create_ds, zip(envs, discounts))
         p.map(train, zip(envs, discounts))
 
-    """
+
     # assess all datasets
     results = []
     mm = MetricsManager(experiment)
@@ -83,6 +83,6 @@ if __name__ == '__main__':
 
     with open(os.path.join("data", f"ex{experiment}", "metrics.pkl"), "wb") as f:
         pickle.dump(mm, f)
-    """
+
 
 

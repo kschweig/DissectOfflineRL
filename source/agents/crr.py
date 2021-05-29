@@ -50,7 +50,7 @@ class CRR(Agent):
         self.p_optim = torch.optim.Adam(params=self.actor.parameters(), lr=self.lr)
 
         # Temperature parameter
-        self.beta = 1
+        self.beta = 0.5
 
     def policy(self, state, eval=False):
 
@@ -127,7 +127,8 @@ class CRR(Agent):
         with torch.no_grad():
             actions = self.actor_target(next_state)
             probs = F.softmax(actions, dim=1)
-            target_Q = reward + not_done * self.discount * (self.Q_target(next_state) * probs).sum(dim=1, keepdim=True)
+            dist = Categorical(probs)
+            target_Q = reward + not_done * self.discount * self.Q_target(next_state).gather(1, dist.sample().unsqueeze(1))
 
         # Get current Q estimate
         current_Q = self.Q(state).gather(1, action)
