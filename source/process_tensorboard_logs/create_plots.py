@@ -9,6 +9,7 @@ import seaborn as sns
 sns.set()
 
 image_type = "png"
+figsize = (7, 5)
 
 # metric manager
 with open(os.path.join("..", "..", "data", f"ex6", "metrics.pkl"), "rb") as f:
@@ -36,7 +37,7 @@ x_label = "Update Steps"
 #algos = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
 algos = ["BC", "DQN", "BCQ", "CQL", "CRR"]
 buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy",
-          "mixed": "Mixed Policy", "noisy": "Noisy Final Policy"}
+          "mixed": "Mixed Policy", "noisy": "Noisy Policy"}
 
 def plt_csv(csv, algo):
     est = np.mean(csv, axis=1)
@@ -90,7 +91,7 @@ for env in data.keys():
         if mode == "online":
             continue
 
-        plt.figure(figsize=(8, 6))
+        plt.figure(figsize=figsize)
         csv = data[env]["online"]["DQN"]
 
         plt.hlines(y=csv.max(), xmin=0, xmax=200000, color="black", linewidths=2, label="Online")
@@ -166,8 +167,8 @@ modes = ["random", "mixed", "er", "noisy", "fully"]
 
 for metric in metrics.keys():
     for env in envs:
-        plt.figure(figsize=(8, 6))
-        plt.ylim(bottom=-0.05, top=1.05)
+        plt.figure(figsize=figsize)
+        plt.ylim(bottom=-0.06, top=1.05)
         plt.ylabel("Normalized Reward")
         plt.xlabel(metrics[metric])
         plt.title(env)
@@ -214,16 +215,20 @@ for metric in metrics.keys():
             adjusted, no_changes = [], True
             for i in range(len(x_)):
                 for j in range(len(x_)):
-                    if i != j and i not in adjusted and abs(x_[i] - x_[j]) < 0.04 * (xmax - xmin):
-                        x_[i] -= 0.02 * (xmax - xmin)
-                        x_[j] += 0.02 * (xmax - xmin)
+                    if i != j and i not in adjusted and abs(x_[i] - x_[j]) < 0.055 * (xmax - xmin):
+                        if x_[i] < x_[j]:
+                            x_[i] -= 0.01 * (xmax - xmin)
+                            x_[j] += 0.01 * (xmax - xmin)
+                        else:
+                            x_[i] += 0.01 * (xmax - xmin)
+                            x_[j] -= 0.01 * (xmax - xmin)
                         adjusted.append(j)
                         no_changes = False
             if no_changes:
                 break
 
         for m, x in enumerate(x_):
-            plt.text(x, -0.035, annotations[m], ha="center")
+            plt.text(x, -0.045, annotations[m], ha="center")
 
         plt.xlim(right=xmax + (xmax - xmin) * 0.18)
 
@@ -238,9 +243,9 @@ for metric in metrics.keys():
 
     # plot for modes
     for env in envs:
-        plt.figure(figsize=(8, 6))
-        plt.ylim(bottom=-0.05, top=1.05)
-        plt.ylabel("Normalized Reward (Dataset)")
+        plt.figure(figsize=figsize)
+        plt.ylim(bottom=-0.06, top=1.05)
+        plt.ylabel("Normalized Reward")
         plt.xlabel("Buffer Type")
         plt.title(env)
 
