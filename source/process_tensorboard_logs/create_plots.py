@@ -15,16 +15,37 @@ figsize = (7, 5)
 with open(os.path.join("..", "..", "data", f"ex6", "metrics.pkl"), "rb") as f:
     mm = pickle.load(f)
 
-# for reward normalisation
+# static stuff
 
 envs = {'CartPole-v1':0, "MiniGrid-LavaGapS6-v0":1}
+#algos = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
+algos = ["BC", "DQN", "BCQ", "CQL", "CRR"]
+buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy",
+          "mixed": "Mixed Policy", "noisy": "Noisy Policy"}
 random_rewards = [0, 0]
 optimal_rewards = [500, 0.95]
+
 """
 envs = {'CartPole-v1':0, 'MountainCar-v0':1, "MiniGrid-LavaGapS6-v0":2, "MiniGrid-SimpleCrossingS9N1-v0":3}
 random_rewards = [0, -200, 0, 0]
 optimal_rewards = [500, -90, 0.95, 0.961]
 """
+
+
+def plt_csv(csv, algo, set_title=True, color=None):
+    est = np.mean(csv, axis=1)
+    sd = np.std(csv, axis=1)
+    cis = (est - sd, est + sd)
+
+    plt.fill_between(np.arange(0, len(est) * 100, 100), cis[0], cis[1], alpha=0.2, color=color)
+    plt.plot(np.arange(0, len(est) * 100, 100), est, label=algo, color=color)
+    plt.ylabel(y_label)
+    plt.xlabel(x_label)
+    plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+    if set_title:
+        plt.title(env + " (" + buffer[mode] + ")")
+
+
 ####################################
 #       Usual Reward plots         #
 ####################################
@@ -34,23 +55,6 @@ mark = "reward"
 # titles
 y_label = "Normalized Reward"
 x_label = "Update Steps"
-#algos = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
-algos = ["BC", "DQN", "BCQ", "CQL", "CRR"]
-buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy",
-          "mixed": "Mixed Policy", "noisy": "Noisy Policy"}
-
-def plt_csv(csv, algo):
-    est = np.mean(csv, axis=1)
-    sd = np.std(csv, axis=1)
-    cis = (est - sd, est + sd)
-
-    plt.fill_between(np.arange(0, len(est) * 100, 100), cis[0], cis[1], alpha=0.2)
-    plt.plot(np.arange(0, len(est) * 100, 100), est, label=algo)
-    plt.ylabel(y_label)
-    plt.xlabel(x_label)
-    plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
-    plt.title(env + " (" + buffer[mode] + ")")
-
 
 indir = os.path.join("..", "..", "results", "csv", mark)
 outdir = os.path.join("..", "..", "results", "img", mark)
@@ -63,9 +67,10 @@ for file in glob.glob(os.path.join(indir, "*.csv")):
 data = dict()
 
 for file in files:
-    env = file.split("/")[-1].split("_")[0]
-    mode = file.split("_")[1]
-    algo = file.split("_")[2].split(".")[0]
+    name = file.split("/")[-1]
+    env = name.split("_")[0]
+    mode = name.split("_")[1]
+    algo = name.split("_")[2].split(".")[0]
 
     try:
         csv = np.loadtxt(file, delimiter=";")
@@ -93,17 +98,77 @@ for env in data.keys():
 
         plt.figure(figsize=figsize)
         csv = data[env]["online"]["DQN"]
-
-        plt.hlines(y=csv.max(), xmin=0, xmax=200000, color="black", linewidths=2, label="Online")
+        plt.hlines(y=csv.max(), xmin=0, xmax=200000, color="black", linewidths=2)
+        plt_csv(csv, "Online", color="black")
 
         norm = (mm.get_data(env, mode)[0][0] - random_rewards[envs[env]] ) / (optimal_rewards[envs[env]] - random_rewards[envs[env]])
         plt.hlines(y=norm, xmin=0, xmax=200000, color="black", linestyles="dotted",
                    linewidths=2, label="Behav.")
 
-        for algo in algos:
-
+        for a, algo in enumerate(algos):
             csv = data[env][mode][algo]
-            plt_csv(csv, algo)
+            plt_csv(csv, algo, color=f"C{a}")
+
+        plt.legend(loc="lower right")
+        plt.tight_layout()
+        plt.savefig(os.path.join(outdir, env + "_" + mode + "." + image_type))
+        plt.close()
+
+##################################
+#    Action-Value Deviations     #
+##################################
+
+mark = "action_value_deviation"
+
+# titles
+y_label = "Action-Value deviation"
+x_label = "Update Steps"
+
+indir = os.path.join("..", "..", "results", "csv", mark)
+outdir = os.path.join("..", "..", "results", "img", mark)
+os.makedirs(outdir, exist_ok=True)
+
+files = []
+for file in glob.glob(os.path.join(indir, "*.csv")):
+    files.append(file)
+data_avd = dict()
+
+for file in files:
+    name = file.split("/")[-1]
+    env = name.split("_")[0]
+    mode = name.split("_")[1]
+    algo = name.split("_")[2].split(".")[0]
+
+    try:
+        csv = np.loadtxt(file, delimiter=";")
+    except:
+        print("Error in ", env, mode, algo)
+
+    if len(csv.shape) == 1:
+        csv = csv.reshape(-1, 1)
+
+    if not data_avd.keys() or env not in data_avd.keys():
+        data_avd[env] = dict()
+    if not data_avd[env].keys() or mode not in data_avd[env].keys():
+        data_avd[env][mode] = dict()
+
+    data_avd[env][mode][algo] = csv
+
+algos_ = algos.copy()
+algos_.remove("BC")
+for env in data_avd.keys():
+    for mode in data_avd[env].keys():
+        if mode == "online":
+            continue
+
+        plt.figure(figsize=figsize)
+
+        csv = data_avd[env]["online"]["DQN"]
+        plt_csv(csv, "Online", False, "black")
+
+        for a, algo in enumerate(algos_):
+            csv = data_avd[env][mode][algo]
+            plt_csv(csv, algo, True, f"C{a+1}")
 
         plt.legend(loc="lower right")
         plt.tight_layout()
@@ -114,11 +179,171 @@ for env in data.keys():
 #        Comparisons        #
 #############################
 
+##################################
+# load action-value deviation data
+##################################
+indir = os.path.join("..", "..", "results", "csv", "action_value_deviation")
+outdir = os.path.join("..", "..", "results", "img", "comp_avd")
+os.makedirs(outdir, exist_ok=True)
+
+files = []
+for file in glob.glob(os.path.join(indir, "*.csv")):
+    files.append(file)
+
+data_avd = dict()
+
+for file in files:
+    name = file.split("/")[-1]
+    env = name.split("_")[0]
+    mode = name.split("_")[1]
+    algo = name.split("_")[2].split(".")[0]
+
+    try:
+        csv = np.loadtxt(file, delimiter=";")
+    except:
+        print("Error in ", env, mode, algo)
+
+    if len(csv.shape) == 1:
+        csv = csv.reshape(-1, 1)
+
+    # first hundred invalid, as they are not the correct sma!
+    csv = csv[100:]
+
+    if not data_avd.keys() or env not in data_avd.keys():
+        data_avd[env] = dict()
+    if not data_avd[env].keys() or mode not in data_avd[env].keys():
+        data_avd[env][mode] = dict()
+
+    # get reward and use that for obtaining the value deviation and also skip first 100
+    csv_ = data[env][mode][algo][100:]
+    data_avd[env][mode][algo] = (np.mean(csv, axis=1)[np.argmax(np.mean(csv_, axis=1))],
+                                 np.std(csv, axis=1)[np.argmax(np.mean(csv_, axis=1))])
+
+
 ###############
-# load data
+# plot metrics + policy for action value deviation
 ###############
+metrics = {(1,0):"Normalized Reward (mean)", (1,1):"Normalized Reward (std)", (2,0):"Entropy (mean)",
+           (2,1):"Entropy (std)", (4,0):"Episode Length (mean)", (4,1):"Episode Length (std)",
+           (5,0):"Unique States per Episode (mean)", (5,1):"Unique States per Episode (std)",
+           (6,0):"Uniqueness (mean)", (6,1):"Uniqueness (std)", 7:"Unique States"}
+
+annotations = ["(R)", "(M)", "(ER)", "(N)", "(F)"]
+modes = ["random", "mixed", "er", "noisy", "fully"]
+
+for metric in metrics.keys():
+    for env in envs:
+        plt.figure(figsize=figsize)
+        plt.ylabel("Action-Value deviation")
+        plt.xlabel(metrics[metric])
+        plt.title(env)
+
+        # BC has no value estimate
+        algos_ = algos.copy()
+        algos_.remove("BC")
+        for a, algo in enumerate(algos_):
+            x, y, sd = [], [], []
+            for mode in modes:
+                if metric == 7:
+                    x.append(mm.get_data(env, mode)[metric])
+                else:
+                    x.append(mm.get_data(env, mode)[metric[0]][metric[1]])
+                y.append(data_avd[env][mode][algo][0])
+                sd.append(data_avd[env][mode][algo][1])
+
+            x, y, sd = [list(tuple) for tuple in zip(*sorted(zip(x, y, sd)))]
+
+            cis = (np.asarray(y) - np.asarray(sd), np.asarray(y) + np.asarray(sd))
+            plt.fill_between(x, cis[0], cis[1], alpha=0.2, color=f"C{a+1}")
+            plt.plot(x, y, "o-", label=algo, color=f"C{a+1}")
+
+        xmax, xmin, x_ = 0, 9e9, []
+        for m, mode in enumerate(modes):
+            if metric == 7:
+                x = mm.get_data(env, mode)[metric]
+            else:
+                x = mm.get_data(env, mode)[metric[0]][metric[1]]
+            xmin = x if x < xmin else xmin
+            xmax = x if x > xmax else xmax
+            x_.append(x)
+
+        # adjust markings if they overlap! do multiple times to be sure
+        for _ in range(10):
+            adjusted, no_changes = [], True
+            for i in range(len(x_)):
+                for j in range(len(x_)):
+                    if i != j and i not in adjusted and abs(x_[i] - x_[j]) < 0.055 * (xmax - xmin):
+                        if x_[i] < x_[j]:
+                            x_[i] -= 0.01 * (xmax - xmin)
+                            x_[j] += 0.01 * (xmax - xmin)
+                        else:
+                            x_[i] += 0.01 * (xmax - xmin)
+                            x_[j] -= 0.01 * (xmax - xmin)
+                        adjusted.append(j)
+                        no_changes = False
+            if no_changes:
+                break
+
+        # position text
+        _, _, ymin, ymax = plt.axis()
+        for m, x in enumerate(x_):
+            plt.text(x, ymin + (ymax - ymin)*0.02, annotations[m], ha="center")
+
+        plt.xlim(right=xmax + (xmax - xmin) * 0.18)
+
+        # Online Policy
+        csv = data_avd[env]["online"]["DQN"]
+        plt.hlines(y=csv[0], xmin=xmin, xmax=xmax, color="black", linewidths=2, label="Online")
+
+        plt.legend(loc="upper right", fontsize="x-small", markerscale=0.7, handlelength=1.5)
+        plt.tight_layout()
+        plt.savefig(os.path.join(outdir, env + "_" + metrics[metric] + "." + image_type))
+        plt.close()
+
+    # plot for modes
+    for env in envs:
+        plt.figure(figsize=figsize)
+        plt.ylabel("Action-Value deviation")
+        plt.xlabel("Buffer Type")
+        plt.title(env)
+
+        algos_ = algos.copy()
+        algos_.remove("BC")
+        for a, algo in enumerate(algos_):
+            x, y, sd = [], [], []
+            for m, mode in enumerate(modes):
+                x.append(m)
+                y.append(data_avd[env][mode][algo][0])
+                sd.append(data_avd[env][mode][algo][1])
+            x, y, sd = [list(tuple) for tuple in zip(*sorted(zip(x, y, sd)))]
+
+            cis = (np.asarray(y) - np.asarray(sd), np.asarray(y) + np.asarray(sd))
+            plt.fill_between(x, cis[0], cis[1], alpha=0.2, color=F"C{a+1}")
+            plt.plot(x, y, "o-", label=algo, color=F"C{a+1}")
+
+        x = []
+        for m, mode in enumerate(modes):
+            x.append(m)
+
+        plt.xlim(right=(len(modes)-1) * 1.18)
+
+        # Online Policy
+        csv = data_avd[env]["online"]["DQN"]
+        plt.hlines(y=csv[0], xmin=0, xmax=len(modes) - 1, color="black", linewidths=2, label="Online")
+
+        plt.xticks(range(len(modes)), [buffer[m] for m in modes], fontsize="small")
+
+        plt.legend(loc="upper right", fontsize="x-small", markerscale=0.7, handlelength=1.5)
+        plt.tight_layout()
+        plt.savefig(os.path.join(outdir, env + "_buffertypes" + "." + image_type))
+        plt.close()
+
+
+##################
+# load reward data
+##################
 indir = os.path.join("..", "..", "results", "csv", "reward")
-outdir = os.path.join("..", "..", "results", "img", "comp")
+outdir = os.path.join("..", "..", "results", "img", "comp_reward")
 os.makedirs(outdir, exist_ok=True)
 
 files = []
@@ -128,9 +353,10 @@ for file in glob.glob(os.path.join(indir, "*.csv")):
 data = dict()
 
 for file in files:
-    env = file.split("/")[-1].split("_")[0]
-    mode = file.split("_")[1]
-    algo = file.split("_")[2].split(".")[0]
+    name = file.split("/")[-1]
+    env = name.split("_")[0]
+    mode = name.split("_")[1]
+    algo = name.split("_")[2].split(".")[0]
 
     try:
         csv = np.loadtxt(file, delimiter=";")
@@ -155,7 +381,7 @@ for file in files:
     data[env][mode][algo] = (np.mean(csv, axis=1).max(), np.std(csv, axis=1)[np.argmax(np.mean(csv, axis=1))])
 
 ###############
-# plot metrics + policy
+# plot metrics + policy for reward
 ###############
 metrics = {(1,0):"Normalized Reward (mean)", (1,1):"Normalized Reward (std)", (2,0):"Entropy (mean)",
            (2,1):"Entropy (std)", (4,0):"Episode Length (mean)", (4,1):"Episode Length (std)",
@@ -281,4 +507,5 @@ for metric in metrics.keys():
         plt.tight_layout()
         plt.savefig(os.path.join(outdir, env + "_buffertypes" + "." + image_type))
         plt.close()
+
 
