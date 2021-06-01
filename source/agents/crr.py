@@ -50,7 +50,9 @@ class CRR(Agent):
         self.p_optim = torch.optim.Adam(params=self.actor.parameters(), lr=self.lr)
 
         # Temperature parameter
-        self.beta = 0.5
+        self.beta = 1
+        # parameter for advantage estimate
+        self.m = 4
 
     def policy(self, state, eval=False):
 
@@ -94,16 +96,24 @@ class CRR(Agent):
         # calculate advantage
         with torch.no_grad():
             current_Qs = self.Q(state)
-            advantage = current_Qs - current_Qs.mean(dim=1, keepdim=True)
+            baseline = []
+            # sample m times for baseline
+            for _ in range(self.m):
+                actions = self.actor(state)
+                probs = F.softmax(actions, dim=1)
+                dist = Categorical(probs)
+                baseline.append(current_Qs.gather(1, dist.sample().unsqueeze(1)))
+            baseline = torch.stack(baseline, dim=0)
+            advantage = current_Qs - torch.max(baseline, dim=0)[0]
 
         # predict action the policy would take
         log_actions = F.log_softmax(self.actor(state), dim=1)
 
         # policy loss
         # exp style
-        loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
+        #loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
         # binary style
-        # loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
+        loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
 
         if self.iterations % 100 == 0:
             writer.add_scalar("train/policy-loss", torch.mean(loss).detach().cpu().item(), self.iterations)
