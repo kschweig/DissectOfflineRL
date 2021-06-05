@@ -18,12 +18,14 @@ with open(os.path.join("..", "..", "data", f"ex6", "metrics.pkl"), "rb") as f:
 # static stuff
 
 envs = {'CartPole-v1':0, "MiniGrid-LavaGapS6-v0":1}
-#algos = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
-algos = ["BC", "DQN", "BCQ", "CQL", "CRR"]
+algos = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
+#algos = ["BC", "DQN", "BCQ", "CQL", "CRR"]
 buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy",
           "mixed": "Mixed Policy", "noisy": "Noisy Policy"}
 random_rewards = [0, 0]
 optimal_rewards = [500, 0.95]
+
+y_bounds = {'CartPole-v1': (-10, 15), "MiniGrid-LavaGapS6-v0":(-1, 1)}
 
 """
 envs = {'CartPole-v1':0, 'MountainCar-v0':1, "MiniGrid-LavaGapS6-v0":2, "MiniGrid-SimpleCrossingS9N1-v0":3}
@@ -47,13 +49,13 @@ def plt_csv(csv, algo, set_title=True, color=None):
 
 
 ####################################
-#       Usual Reward plots         #
+#       Usual Return plots         #
 ####################################
 
-mark = "reward"
+mark = "return"
 
 # titles
-y_label = "Normalized Reward"
+y_label = "Normalized Return"
 x_label = "Update Steps"
 
 indir = os.path.join("..", "..", "results", "csv", mark)
@@ -170,6 +172,10 @@ for env in data_avd.keys():
             csv = data_avd[env][mode][algo]
             plt_csv(csv, algo, True, f"C{a+1}")
 
+        _, _, ymin, ymax = plt.axis()
+        bottom = max(y_bounds[env][0], ymin)
+        top = min(y_bounds[env][1], ymax)
+        plt.ylim(bottom=bottom, top=top)
         plt.legend(loc="lower right")
         plt.tight_layout()
         plt.savefig(os.path.join(outdir, env + "_" + mode + "." + image_type))
@@ -223,7 +229,7 @@ for file in files:
 ###############
 # plot metrics + policy for action value deviation
 ###############
-metrics = {(1,0):"Normalized Reward (mean)", (1,1):"Normalized Reward (std)", (2,0):"Entropy (mean)",
+metrics = {(1,0):"Normalized Return (mean)", (1,1):"Normalized Return (std)", (2,0):"Entropy (mean)",
            (2,1):"Entropy (std)", (4,0):"Episode Length (mean)", (4,1):"Episode Length (std)",
            (5,0):"Unique States per Episode (mean)", (5,1):"Unique States per Episode (std)",
            (6,0):"Uniqueness (mean)", (6,1):"Uniqueness (std)", 7:"Unique States"}
@@ -256,6 +262,11 @@ for metric in metrics.keys():
             cis = (np.asarray(y) - np.asarray(sd), np.asarray(y) + np.asarray(sd))
             plt.fill_between(x, cis[0], cis[1], alpha=0.2, color=f"C{a+1}")
             plt.plot(x, y, "o-", label=algo, color=f"C{a+1}")
+
+        _, _, ymin, ymax = plt.axis()
+        bottom = max(y_bounds[env][0], ymin)
+        top = min(y_bounds[env][1], ymax)
+        plt.ylim(bottom=bottom, top=top)
 
         xmax, xmin, x_ = 0, 9e9, []
         for m, mode in enumerate(modes):
@@ -325,6 +336,11 @@ for metric in metrics.keys():
         for m, mode in enumerate(modes):
             x.append(m)
 
+        _, _, ymin, ymax = plt.axis()
+        bottom = max(y_bounds[env][0], ymin)
+        top = min(y_bounds[env][1], ymax)
+        plt.ylim(bottom=bottom, top=top)
+
         plt.xlim(right=(len(modes)-1) * 1.18)
 
         # Online Policy
@@ -342,8 +358,8 @@ for metric in metrics.keys():
 ##################
 # load reward data
 ##################
-indir = os.path.join("..", "..", "results", "csv", "reward")
-outdir = os.path.join("..", "..", "results", "img", "comp_reward")
+indir = os.path.join("..", "..", "results", "csv", "return")
+outdir = os.path.join("..", "..", "results", "img", "comp_return")
 os.makedirs(outdir, exist_ok=True)
 
 files = []
@@ -383,7 +399,7 @@ for file in files:
 ###############
 # plot metrics + policy for reward
 ###############
-metrics = {(1,0):"Normalized Reward (mean)", (1,1):"Normalized Reward (std)", (2,0):"Entropy (mean)",
+metrics = {(1,0):"Normalized Return (mean)", (1,1):"Normalized Return (std)", (2,0):"Entropy (mean)",
            (2,1):"Entropy (std)", (4,0):"Episode Length (mean)", (4,1):"Episode Length (std)",
            (5,0):"Unique States per Episode (mean)", (5,1):"Unique States per Episode (std)",
            (6,0):"Uniqueness (mean)", (6,1):"Uniqueness (std)", 7:"Unique States"}
@@ -395,7 +411,7 @@ for metric in metrics.keys():
     for env in envs:
         plt.figure(figsize=figsize)
         plt.ylim(bottom=-0.06, top=1.05)
-        plt.ylabel("Normalized Reward")
+        plt.ylabel("Normalized Return")
         plt.xlabel(metrics[metric])
         plt.title(env)
 
@@ -471,7 +487,7 @@ for metric in metrics.keys():
     for env in envs:
         plt.figure(figsize=figsize)
         plt.ylim(bottom=-0.06, top=1.05)
-        plt.ylabel("Normalized Reward")
+        plt.ylabel("Normalized Return")
         plt.xlabel("Buffer Type")
         plt.title(env)
 

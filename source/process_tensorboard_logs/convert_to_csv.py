@@ -15,7 +15,7 @@ ex = "ex6"
 #'eval/Reward (SMA)' 'eval/Entropy'
 tags = ['eval/Reward (SMA)', 'eval/Action-Value deviation (mean) (SMA)']
 # "reward" "entropy"
-marks = ["reward", "action_value_deviation"]
+marks = ["return", "action_value_deviation"]
 
 
 for t, tag in enumerate(tags):

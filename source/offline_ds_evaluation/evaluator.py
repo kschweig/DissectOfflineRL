@@ -86,9 +86,9 @@ class Evaluator():
                         sparsity)
 
         print("-"*50)
-        print("Min / Mean / Max Reward: \t\t", f"{round(np.min(rewards), 2)} / {round(np.mean(rewards), 2)} "
+        print("Min / Mean / Max Return: \t\t", f"{round(np.min(rewards), 2)} / {round(np.mean(rewards), 2)} "
                                              f"/ {round(np.max(rewards), 2)}")
-        print("Min / Mean / Max Normalized Reward: \t\t", f"{round(np.min(normalized_reward), 2)} / "
+        print("Min / Mean / Max Normalized Return: \t\t", f"{round(np.min(normalized_reward), 2)} / "
                                                f"{round(np.mean(normalized_reward), 2)} "
                                                f"/ {round(np.max(normalized_reward), 2)}")
         print("Min / Mean / Max Entropy: \t", f"{round(np.min(entropies), 2)} / {round(np.mean(entropies), 2)} "

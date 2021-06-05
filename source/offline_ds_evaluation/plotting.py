@@ -10,7 +10,7 @@ def plot_histograms(output, reward, episode_length, unique_states_episode, entro
 
     fig, axs = plt.subplots(2, 3, figsize=(9,4))
     axs[0, 0].hist(reward, bins=bins, range=(0, 1))
-    axs[0, 0].set_title('Reward')
+    axs[0, 0].set_title('Return')
     axs[0, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     axs[0, 0].set_xticks([0, 0.25, 0.5, 0.75, 1])
 

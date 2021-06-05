@@ -6,7 +6,7 @@ def create_latex_table(path, arguments):
                    "CartPole-v1": "cartpole", "Acrobot-v1":"acrobot", "MountainCar-v0": "mountaincar"}
     buffer = {"er": "Exp. Replay", "fully": "Final Policy", "random": "Random Policy",
               "mixed": "Mixed Policy", "noisy": "Noisy Policy"}
-    results = ["Reward", "Reward (Norm.)", "Entropy (Norm.)", "Sparsity", "Episode Length",
+    results = ["Return", "Return (Norm.)", "Entropy (Norm.)", "Sparsity", "Episode Length",
                "Unique States / Ep.", "Uniqueness", "Unique States"]
 
     with open(path, "w") as f:
