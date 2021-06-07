@@ -14,7 +14,7 @@ envs = ['MountainCar-v0', "MiniGrid-Dynamic-Obstacles-6x6-v0"]
 discounts = [0.99, 0.95]
 buffer_types = ["random", "mixed", "er", "noisy", "fully"]
 agent_types = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
-multiple_runs = 3
+multiple_runs = 5
 # experiment parameters
 experiment = 5
 seed = 42

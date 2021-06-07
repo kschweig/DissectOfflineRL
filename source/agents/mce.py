@@ -9,7 +9,7 @@ from ..utils.evaluation import entropy
 from ..networks.critic import Critic
 
 
-class EVMCP(Agent):
+class MCE(Agent):
 
     def __init__(self,
                  obs_space,
@@ -17,7 +17,7 @@ class EVMCP(Agent):
                  discount,
                  lr,
                  seed=None):
-        super(EVMCP, self).__init__(obs_space, action_space, discount, lr, seed)
+        super(MCE, self).__init__(obs_space, action_space, discount, lr, seed)
 
         self.eval_eps = 0.
 
@@ -72,7 +72,7 @@ class EVMCP(Agent):
         self.iterations += 1
 
     def get_name(self) -> str:
-        return "EveryVisitMonteCarloPrediction"
+        return "Monte-Carlo Estimation"
 
     def save_state(self) -> None:
         torch.save(self.Q.state_dict(), os.path.join("models", self.get_name() + "_Q.pt"))

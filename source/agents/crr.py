@@ -42,6 +42,8 @@ class CRR(Agent):
         self.actor = Actor(self.obs_space, self.action_space, seed).to(self.device)
         self.actor_target = copy.deepcopy(self.actor)
 
+        self.ce = nn.CrossEntropyLoss(reduction='none')
+
         # huber loss
         self.huber = nn.SmoothL1Loss()
 
@@ -104,16 +106,18 @@ class CRR(Agent):
                 dist = Categorical(probs)
                 baseline.append(current_Qs.gather(1, dist.sample().unsqueeze(1)))
             baseline = torch.stack(baseline, dim=0)
-            advantage = current_Qs - torch.max(baseline, dim=0)[0]
-
-        # predict action the policy would take
-        log_actions = F.log_softmax(self.actor(state), dim=1)
+            # mean style
+            advantage = current_Qs - torch.mean(baseline, dim=0)
+            # max style
+            #advantage = current_Qs - torch.max(baseline, dim=0)[0]
 
         # policy loss
         # exp style
-        #loss = -(log_actions * torch.exp(advantage / self.beta)).sum(dim=1).mean()
+        #loss = (self.ce(self.actor(state), action.squeeze(1)).unsqueeze(1) *
+        #        torch.exp(advantage / self.beta).gather(1, action)).mean()
         # binary style
-        loss = -(log_actions * torch.heaviside(advantage, values=torch.zeros(1).to(self.device))).sum(dim=1).mean()
+        loss = (self.ce(self.actor(state), action.squeeze(1)).unsqueeze(1) *
+                torch.heaviside(advantage, values=torch.zeros(1).to(self.device)).gather(1, action)).mean()
 
         if self.iterations % 100 == 0:
             writer.add_scalar("train/policy-loss", torch.mean(loss).detach().cpu().item(), self.iterations)

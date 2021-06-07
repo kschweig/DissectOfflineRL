@@ -1,5 +1,6 @@
 import gym
 import gym_minigrid
+from gym_minigrid.wrappers import FullyObsWrapper
 from gym_minigrid.window import Window
 from source.utils.wrappers import FlatImgObsWrapper
 
@@ -39,7 +40,7 @@ envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0', 'LunarLander-v2']
 
 #env = gym.make(envs[2])
 
-env = FlatImgObsWrapper(gym.make('MiniGrid-Dynamic-Obstacles-6x6-v0'))
+env = FlatImgObsWrapper(FullyObsWrapper(gym.make('MiniGrid-Dynamic-Obstacles-6x6-v0')))
 #env = FlatImgObsWrapper(gym.make('MiniGrid-LavaGapS6-v0'))
 obs = env.reset()
 print(env.observation_space.high)

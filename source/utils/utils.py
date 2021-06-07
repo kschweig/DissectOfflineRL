@@ -1,14 +1,14 @@
 import numpy as np
 import gym
 import gym_minigrid
-import torch.nn.functional as F
+from gym_minigrid.wrappers import FullyObsWrapper
 from .wrappers import FlatImgObsWrapper, RestrictMiniGridActionWrapper
 from ..agents.dqn import DQN
 from ..agents.rem import REM
 from ..agents.qrdqn import QRDQN
 from ..agents.bcq import BCQ
 from ..agents.sac import SAC
-from ..agents.evmcp import EVMCP
+from ..agents.mce import MCE
 from ..agents.crr import CRR
 from ..agents.cql import CQL
 from ..agents.bc import BehavioralCloning
@@ -27,8 +27,8 @@ def get_agent(agent_type, obs_space, num_actions, discount, lr, seed):
         return BCQ(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "SAC":
         return SAC(obs_space, num_actions, discount, lr, seed=seed)
-    elif agent_type == "EVMCP":
-        return EVMCP(obs_space, num_actions, discount, lr, seed=seed)
+    elif agent_type == "MCE":
+        return MCE(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "CRR":
         return CRR(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "CQL":
@@ -47,7 +47,7 @@ def get_agent(agent_type, obs_space, num_actions, discount, lr, seed):
 def make_env(envid):
     env = gym.make(envid)
     if "MiniGrid" in envid:
-        env = FlatImgObsWrapper(RestrictMiniGridActionWrapper(env))
+        env = FlatImgObsWrapper(FullyObsWrapper(RestrictMiniGridActionWrapper(env)))
     return env
 
 

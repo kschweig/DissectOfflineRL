@@ -18,8 +18,8 @@ with open(os.path.join("..", "..", "data", f"ex6", "metrics.pkl"), "rb") as f:
 # static stuff
 
 envs = {'CartPole-v1':0, "MiniGrid-LavaGapS6-v0":1}
-algos = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
-#algos = ["BC", "DQN", "BCQ", "CQL", "CRR"]
+#algos = ["BC", "BVE", "MCE", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
+algos = ["BC", "MCE", "DQN", "BCQ", "CQL"]
 buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy",
           "mixed": "Mixed Policy", "noisy": "Noisy Policy"}
 random_rewards = [0, 0]
@@ -300,7 +300,7 @@ for metric in metrics.keys():
         for m, x in enumerate(x_):
             plt.text(x, ymin + (ymax - ymin)*0.02, annotations[m], ha="center")
 
-        plt.xlim(right=xmax + (xmax - xmin) * 0.18)
+        plt.xlim(right=xmax + (xmax - xmin) * 0.2)
 
         # Online Policy
         csv = data_avd[env]["online"]["DQN"]
@@ -341,7 +341,7 @@ for metric in metrics.keys():
         top = min(y_bounds[env][1], ymax)
         plt.ylim(bottom=bottom, top=top)
 
-        plt.xlim(right=(len(modes)-1) * 1.18)
+        plt.xlim(right=(len(modes)-1) * 1.2)
 
         # Online Policy
         csv = data_avd[env]["online"]["DQN"]
@@ -472,7 +472,7 @@ for metric in metrics.keys():
         for m, x in enumerate(x_):
             plt.text(x, -0.045, annotations[m], ha="center")
 
-        plt.xlim(right=xmax + (xmax - xmin) * 0.18)
+        plt.xlim(right=xmax + (xmax - xmin) * 0.2)
 
         # Online Policy
         csv = data[env]["online"]["DQN"]
