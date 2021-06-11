@@ -1,8 +1,9 @@
 import numpy as np
 import gym
 import gym_minigrid
+import gym_minatar
 from gym_minigrid.wrappers import FullyObsWrapper
-from .wrappers import FlatImgObsWrapper, RestrictMiniGridActionWrapper
+from .wrappers import FlatImgObsWrapper, RestrictMiniGridActionWrapper, MinAtarObsWrapper
 from ..agents.dqn import DQN
 from ..agents.rem import REM
 from ..agents.qrdqn import QRDQN
@@ -47,7 +48,9 @@ def get_agent(agent_type, obs_space, num_actions, discount, lr, seed):
 def make_env(envid):
     env = gym.make(envid)
     if "MiniGrid" in envid:
-        env = FlatImgObsWrapper(FullyObsWrapper(RestrictMiniGridActionWrapper(env)))
+        env = FlatImgObsWrapper(RestrictMiniGridActionWrapper(env))
+    if "MinAtar" in envid:
+        env = MinAtarObsWrapper(env)
     return env
 
 

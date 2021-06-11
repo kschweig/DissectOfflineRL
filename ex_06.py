@@ -10,10 +10,10 @@ import numpy as np
 
 
 # project parameters
-envs = ['CartPole-v1', "MiniGrid-LavaGapS6-v0"]
+envs = ['CartPole-v1', "MiniGrid-LavaGapS7-v0"]
 discounts = [0.95, 0.95]
 buffer_types = ["random", "mixed", "er", "noisy", "fully"]
-agent_types = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
+agent_types = ["BC", "BVE", "MCE", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
 multiple_runs = 5
 # experiment parameters
 experiment = 6
@@ -27,7 +27,7 @@ batch_size = 128
 lr = [1e-4] * len(agent_types)
 # parameters for evaluation
 random_rewards = [20, 0]
-optimal_rewards = [500, 0.95]
+optimal_rewards = [500, 0.94]
 
 
 def create_ds(args):
@@ -45,7 +45,7 @@ def train(args):
             for bt in range(len(buffer_types)):
                 train_offline(experiment=experiment, envid=envid, agent_type=agent, buffer_type=buffer_types[bt],
                               discount=discount, transitions=transitions_offline, batch_size=batch_size, lr=lr[a],
-                              use_run=1, run=run, seed=seed+run, use_remaining_reward=(agent == "EVMCP"))
+                              use_run=1, run=run, seed=seed+run, use_remaining_reward=(agent == "MCE"))
 
 def assess_ds(args):
     use_run = 1
@@ -63,10 +63,10 @@ def assess_ds(args):
 if __name__ == '__main__':
 
     with Pool(len(envs), maxtasksperchild=1) as p:
-        #p.map(create_ds, zip(envs, discounts))
+        p.map(create_ds, zip(envs, discounts))
         p.map(train, zip(envs, discounts))
 
-    """
+
     # assess all datasets
     results = []
     mm = MetricsManager(experiment)
@@ -83,6 +83,6 @@ if __name__ == '__main__':
 
     with open(os.path.join("data", f"ex{experiment}", "metrics.pkl"), "wb") as f:
         pickle.dump(mm, f)
-    """
+
 
 

@@ -23,3 +23,7 @@ dependencies:
       - gym
       - gym-minigrid
       - tensorboard
+      - pygame
+      - git+https://github.com/ntasfi/PyGame-Learning-Environment.git
+      - git+https://github.com/kenjyoung/MinAtar.git
+      - git+https://github.com/qlan3/gym-games.git

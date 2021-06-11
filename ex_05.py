@@ -10,10 +10,10 @@ import numpy as np
 
 
 # project parameters
-envs = ['MountainCar-v0', "MiniGrid-Dynamic-Obstacles-6x6-v0"]
+envs = ['MountainCar-v0', "MiniGrid-Dynamic-Obstacles-8x8-v0"]
 discounts = [0.99, 0.95]
 buffer_types = ["random", "mixed", "er", "noisy", "fully"]
-agent_types = ["BC", "BVE", "EVMCP", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
+agent_types = ["BC", "BVE", "MCE", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
 multiple_runs = 5
 # experiment parameters
 experiment = 5
@@ -26,8 +26,8 @@ transitions_offline = 2 * transitions_online
 batch_size = 128
 lr = [1e-4] * len(agent_types)
 # parameters for evaluation
-random_rewards = [-200, 0]
-optimal_rewards = [-90, 0.961]
+random_rewards = [-200, -1]
+optimal_rewards = [-90, 0.94]
 
 
 def create_ds(args):
@@ -45,7 +45,7 @@ def train(args):
             for bt in range(len(buffer_types)):
                 train_offline(experiment=experiment, envid=envid, agent_type=agent, buffer_type=buffer_types[bt],
                               discount=discount, transitions=transitions_offline, batch_size=batch_size, lr=lr[a],
-                              use_run=1, run=run, seed=seed+run, use_remaining_reward=(agent == "EVMCP"))
+                              use_run=1, run=run, seed=seed+run, use_remaining_reward=(agent == "MCE"))
 
 def assess_ds(args):
     use_run = 1

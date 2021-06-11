@@ -33,7 +33,7 @@ effects of CNN's will be lost.
 - [x] [Classic control](https://gym.openai.com/envs/#classic_control)
     - [x] [CartPole-v1](https://gym.openai.com/envs/CartPole-v1/)
     - [x] [MountainCar-v0](https://gym.openai.com/envs/MountainCar-v0/)
-    - [x] [Acrobot-v1](https://gym.openai.com/envs/Acrobot-v1/)
+    - [ ] [Acrobot-v1](https://gym.openai.com/envs/Acrobot-v1/)
     - [ ] [LunarLander-v2](https://gym.openai.com/envs/LunarLander-v2/)
 - [x] [Minigrid](https://github.com/maximecb/gym-minigrid)
     - [x] [MiniGrid-Empty-Random-6x6-v0](https://github.com/maximecb/gym-minigrid#empty-environment)
