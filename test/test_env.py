@@ -39,19 +39,20 @@ min_steps = 14
 """
 envs = ['CartPole-v1', 'Acrobot-v1', 'MountainCar-v0', 'LunarLander-v2']
 
-#env = gym.make(envs[2])
-env = (gym.make("Breakout-MinAtar-v0"))
-env = MinAtarObsWrapper(gym.make("Space_invaders-MinAtar-v0"))
+env = gym.make(envs[2])
+#env = (gym.make("Breakout-MinAtar-v0"))
+#env = MinAtarObsWrapper(gym.make("Space_invaders-MinAtar-v0"))
 
-#env = FlatImgObsWrapper(FullyObsWrapper(gym.make('MiniGrid-Dynamic-Obstacles-8x8-v0')))
-#env = FlatImgObsWrapper(gym.make('MiniGrid-LavaGapS6-v0'))
+env = FlatImgObsWrapper(FullyObsWrapper(gym.make('MiniGrid-Dynamic-Obstacles-8x8-v0')))
+env = FlatImgObsWrapper(gym.make('MiniGrid-LavaGapS6-v0'))
 obs = env.reset()
 print(obs.shape)
 print(env.action_space.n)
 print(obs)
 #window = Window(title="MiniGrid")
 for _ in range(10):
-    #img = env.render('rgb_array')
-    #window.show_img(img)
+    img = env.render('rgb_array')
+    window.show_img(img)
     obs, _, _, _ = env.step(env.action_space.sample()) # take a random action
+    print(obs)
 env.close()

@@ -14,7 +14,7 @@ envs = ['Breakout-MinAtar-v0', "Space_invaders-MinAtar-v0"]
 discounts = [0.99, 0.99]
 buffer_types = ["random", "mixed", "er", "noisy", "fully"]
 agent_types = ["BC", "BVE", "MCE", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
-multiple_runs = 5
+multiple_runs = 3
 # experiment parameters
 experiment = 4
 seed = 42
@@ -27,7 +27,7 @@ batch_size = 128
 lr = [1e-4] * len(agent_types)
 # parameters for evaluation
 random_rewards = [0, 0]
-optimal_rewards = [20, 25]
+optimal_rewards = [10, 10]
 
 
 def create_ds(args):
@@ -58,13 +58,14 @@ def assess_ds(args):
     evaluator = Evaluator(envid, buffer_type, buffer.state, buffer.action, buffer.reward, np.invert(buffer.not_done))
 
     path = os.path.join("results", "ds_eval", f"{envid}_{buffer_type}")
-    return evaluator.evaluate(path, random_reward, optimal_reward, threshold=0.999, epochs=5)
+    return evaluator.evaluate(path, random_reward, optimal_reward, rtol=1e-3, epochs=5)
 
 if __name__ == '__main__':
+    """    
     with Pool(len(envs), maxtasksperchild=1) as p:
         p.map(create_ds, zip(envs, discounts))
         p.map(train, zip(envs, discounts))
-
+    """
     # assess all datasets
     results = []
     mm = MetricsManager(experiment)

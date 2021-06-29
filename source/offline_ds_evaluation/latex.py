@@ -2,8 +2,9 @@
 
 def create_latex_table(path, arguments):
 
-    environment = {"MiniGrid-LavaGapS6-v0": "lava", "MiniGrid-SimpleCrossingS9N1-v0": "simple",
-                   "CartPole-v1": "cartpole", "Acrobot-v1":"acrobot", "MountainCar-v0": "mountaincar"}
+    environment = {"MiniGrid-LavaGapS7-v0": "lava", "MiniGrid-Dynamic-Obstacles-8x8-v0": "obstacles",
+                   "CartPole-v1": "cartpole", "Acrobot-v1":"acrobot", "MountainCar-v0": "mountaincar",
+                   "Breakout-MinAtar-v0": "breakout", "Space_invaders-MinAtar-v0": "spaceinvaders"}
     buffer = {"er": "Exp. Replay", "fully": "Final Policy", "random": "Random Policy",
               "mixed": "Mixed Policy", "noisy": "Noisy Policy"}
     results = ["Return", "Return (Norm.)", "Entropy (Norm.)", "Sparsity", "Episode Length",

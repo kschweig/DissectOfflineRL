@@ -2,6 +2,7 @@ import os
 import glob
 import pickle
 import numpy as np
+from source.offline_ds_evaluation.metrics_manager import MetricsManager
 import matplotlib.pyplot as plt
 # Turn interactive plotting off
 plt.ioff()
@@ -12,27 +13,30 @@ image_type = "png"
 figsize = (7, 5)
 
 # metric manager
-with open(os.path.join("..", "..", "data", f"ex6", "metrics.pkl"), "rb") as f:
-    mm = pickle.load(f)
+experiments = ["ex4", "ex5", "ex6"]
+
+mm = MetricsManager(0)
+for ex in experiments:
+    with open(os.path.join("..", "..", "data", ex, "metrics.pkl"), "rb") as f:
+        m = pickle.load(f)
+    mm.data.update(m.data)
 
 # static stuff
 
-envs = {'CartPole-v1':0, "MiniGrid-LavaGapS6-v0":1}
-#algos = ["BC", "BVE", "MCE", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
-algos = ["BC", "MCE", "DQN", "BCQ", "CQL"]
+envs = {'CartPole-v1':0, 'MountainCar-v0':1, "MiniGrid-LavaGapS7-v0":2, "MiniGrid-Dynamic-Obstacles-8x8-v0":3,
+        'Breakout-MinAtar-v0': 4, "Space_invaders-MinAtar-v0": 5}
+
+algos = ["BC", "BVE", "MCE", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
+#algos = ["BC", "MCE", "DQN", "BCQ", "CQL"]
+
 buffer = {"er": "Experience Replay", "fully": "Final Policy", "random": "Random Policy",
           "mixed": "Mixed Policy", "noisy": "Noisy Policy"}
-random_rewards = [0, 0]
-optimal_rewards = [500, 0.95]
 
-y_bounds = {'CartPole-v1': (-10, 15), "MiniGrid-LavaGapS6-v0":(-1, 1)}
+random_rewards = [0, -200, 0, -1, 0, 0]
+optimal_rewards = [500, -90, 0.95, 0.94, 8, 20]
 
-"""
-envs = {'CartPole-v1':0, 'MountainCar-v0':1, "MiniGrid-LavaGapS6-v0":2, "MiniGrid-SimpleCrossingS9N1-v0":3}
-random_rewards = [0, -200, 0, 0]
-optimal_rewards = [500, -90, 0.95, 0.961]
-"""
-
+y_bounds = {'CartPole-v1': (-10, 15), "MiniGrid-LavaGapS7-v0":(-1, 1), 'MountainCar-v0': (-10, 15),
+            "MiniGrid-Dynamic-Obstacles-8x8-v0":(-1, 1), 'Breakout-MinAtar-v0': (-10,50), "Space_invaders-MinAtar-v0": (-10,50)}
 
 def plt_csv(csv, algo, set_title=True, color=None):
     est = np.mean(csv, axis=1)
@@ -70,9 +74,9 @@ data = dict()
 
 for file in files:
     name = file.split("/")[-1]
-    env = name.split("_")[0]
-    mode = name.split("_")[1]
-    algo = name.split("_")[2].split(".")[0]
+    env = "_".join(name.split("_")[:-2])
+    mode = name.split("_")[-2]
+    algo = name.split("_")[-1].split(".")[0]
 
     try:
         csv = np.loadtxt(file, delimiter=";")
@@ -137,9 +141,9 @@ data_avd = dict()
 
 for file in files:
     name = file.split("/")[-1]
-    env = name.split("_")[0]
-    mode = name.split("_")[1]
-    algo = name.split("_")[2].split(".")[0]
+    env = "_".join(name.split("_")[:-2])
+    mode = name.split("_")[-2]
+    algo = name.split("_")[-1].split(".")[0]
 
     try:
         csv = np.loadtxt(file, delimiter=";")
@@ -200,9 +204,9 @@ data_avd = dict()
 
 for file in files:
     name = file.split("/")[-1]
-    env = name.split("_")[0]
-    mode = name.split("_")[1]
-    algo = name.split("_")[2].split(".")[0]
+    env = "_".join(name.split("_")[:-2])
+    mode = name.split("_")[-2]
+    algo = name.split("_")[-1].split(".")[0]
 
     try:
         csv = np.loadtxt(file, delimiter=";")
@@ -370,9 +374,9 @@ data = dict()
 
 for file in files:
     name = file.split("/")[-1]
-    env = name.split("_")[0]
-    mode = name.split("_")[1]
-    algo = name.split("_")[2].split(".")[0]
+    env = "_".join(name.split("_")[:-2])
+    mode = name.split("_")[-2]
+    algo = name.split("_")[-1].split(".")[0]
 
     try:
         csv = np.loadtxt(file, delimiter=";")

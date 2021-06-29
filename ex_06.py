@@ -58,14 +58,14 @@ def assess_ds(args):
     evaluator = Evaluator(envid, buffer_type, buffer.state, buffer.action, buffer.reward, np.invert(buffer.not_done))
 
     path = os.path.join("results", "ds_eval", f"{envid}_{buffer_type}")
-    return evaluator.evaluate(path, random_reward, optimal_reward, threshold=0.999, epochs=5)
+    return evaluator.evaluate(path, random_reward, optimal_reward, rtol=9e-2, epochs=5)
 
 if __name__ == '__main__':
-
+    """
     with Pool(len(envs), maxtasksperchild=1) as p:
         p.map(create_ds, zip(envs, discounts))
         p.map(train, zip(envs, discounts))
-
+    """
 
     # assess all datasets
     results = []

@@ -61,7 +61,7 @@ class Evaluator():
 
     def evaluate(self, output=os.path.join("results", "ds_eval","test"), random_reward = 0, optimal_reward = 1,
                  epochs=10, batch_size=64, lr=1e-3,
-                 subsample=1., threshold=1, verbose=False):
+                 subsample=1., rtol=1e-5, verbose=False):
 
         assert 0 <= subsample <= 1, f"subsample must be in [0;1] but is {subsample}."
 
@@ -72,11 +72,8 @@ class Evaluator():
         ep_lengths = self.get_episode_lengths()
         entropies = self.get_bc_entropy()
 
-        # normalize states
-        self.states /= np.linalg.norm(self.states, axis=1, keepdims=True)
-
-        unique_states_episode = self.get_unique_states_episode(threshold)
-        unique_states = self.get_unique_states(threshold)
+        unique_states_episode = self.get_unique_states_episode(rtol)
+        unique_states = self.get_unique_states(rtol)
 
         normalized_reward = self.get_normalized_rewards(rewards, random_reward, optimal_reward)
 
@@ -171,7 +168,7 @@ class Evaluator():
 
         return entropies
 
-    def get_unique_states_episode(self, threshold=1):
+    def get_unique_states_episode(self, rtol=1e-5):
         unique_states_episode, unique = [], []
         for i, done in tqdm(enumerate(self.dones),
                             desc=f"Search for Unique States per Episode ({self.environment} @ {self.buffer_type})",
@@ -182,7 +179,7 @@ class Evaluator():
 
             found = False
             for unique_state in unique:
-                if np.dot(self.states[i], unique_state) >= threshold:
+                if np.allclose(self.states[i], unique_state, atol=rtol, rtol=rtol):
                     found = True
                     break
             if not found:
@@ -190,14 +187,14 @@ class Evaluator():
 
         return unique_states_episode
 
-    def get_unique_states(self, threshold=1):
+    def get_unique_states(self, rtol=1e-5):
         unique = []
         for i, done in tqdm(enumerate(self.dones),
                             desc=f"Search for Unique States in whole dataset ({self.environment} @ {self.buffer_type})",
                             total=len(self.dones)):
             found = False
             for unique_state in unique:
-                if np.dot(self.states[i], unique_state) >= threshold:
+                if np.allclose(self.states[i], unique_state, atol=rtol, rtol=rtol):
                     found = True
                     break
             if not found:
