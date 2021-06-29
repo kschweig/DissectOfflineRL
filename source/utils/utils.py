@@ -6,6 +6,7 @@ from gym_minigrid.wrappers import FullyObsWrapper
 from .wrappers import FlatImgObsWrapper, RestrictMiniGridActionWrapper, MinAtarObsWrapper
 from ..agents.dqn import DQN
 from ..agents.rem import REM
+from ..agents.uqn import UQN
 from ..agents.qrdqn import QRDQN
 from ..agents.bcq import BCQ
 from ..agents.sac import SAC
@@ -22,6 +23,8 @@ def get_agent(agent_type, obs_space, num_actions, discount, lr, seed):
         return DQN(obs_space, num_actions, discount, lr, seed=seed)
     elif agent_type == "REM":
         return REM(obs_space, num_actions, discount, lr, heads=200, seed=seed)
+    elif agent_type == "UQN":
+        return UQN(obs_space, num_actions, discount, lr, heads=200, seed=seed)
     elif agent_type == "QRDQN":
         return QRDQN(obs_space, num_actions, discount, lr, quantiles=50, seed=seed)
     elif agent_type == "BCQ":

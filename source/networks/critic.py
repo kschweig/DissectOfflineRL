@@ -56,6 +56,25 @@ class RemCritic(Critic):
             return torch.mean(state.view(len(state), self.heads, self.num_actions), dim=1)
 
 
+class UncertaintyCritic(Critic):
+
+    def __init__(self, num_state, num_actions, seed, heads):
+        super(UncertaintyCritic, self).__init__(num_state, num_actions, seed, heads)
+
+        self.heads = heads
+
+    def forward(self, state):
+        state = super(UncertaintyCritic, self).forward(state)
+
+        if self.training:
+            return state.view(len(state), self.heads, self.num_actions)
+        else:
+            # pessimistic estimate of the qvalue for selection
+            q_std = torch.std(state.view(len(state), self.heads, self.num_actions), dim=1)
+            qval = torch.mean(state.view(len(state), self.heads, self.num_actions), dim=1)
+            return qval, q_std
+
+
 class QrCritic(Critic):
 
     def __init__(self, num_state, num_actions, seed, quantiles):
