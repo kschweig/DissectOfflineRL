@@ -5,10 +5,11 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from .networks import BC
+from .networks import BC, Embedding
 from .training import update, evaluate
-from .datasets import BCSet
+from .datasets import BCSet, StateEmbeddingSet, StateActionEmbeddingSet
 from .utils import entropy, BColors
+import matplotlib.pyplot as plt
 from .plotting import plot_histograms
 from .latex import create_latex_table
 
@@ -23,7 +24,7 @@ class Evaluator():
                  actions:np.ndarray,
                  rewards:np.ndarray,
                  dones:np.ndarray,
-                 workers=4,
+                 workers=0,
                  seed=42,
                  num_actions=None):
 
@@ -55,15 +56,27 @@ class Evaluator():
         # could be that dataset contains not every action, then one can pass the correct number of actions
         self.num_actions = num_actions if num_actions is not None else np.max(self.actions) + 1
 
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
         # behavioral cloning network
         self.behavioral_trained = False
-        self.behavioral = BC(num_state=self.states.shape[1], num_actions=self.num_actions, seed=self.seed)
+        self.behavioral = BC(num_state=self.states.shape[1], num_actions=self.num_actions, seed=self.seed).to(device)
 
-    def evaluate(self, output=os.path.join("results", "ds_eval","test"), random_reward = 0, optimal_reward = 1,
+        # state embedding network
+        self.state_embedding_trained = False
+        self.state_embedding = Embedding(num_state=self.states.shape[1], num_embedding=2, seed=self.seed).to(device)
+
+        # state-action embedding network
+        self.state_action_embedding_trained = False
+        self.state_action_embedding = Embedding(num_state=self.states.shape[1], num_embedding=2, seed=self.seed).to(device)
+
+    def evaluate(self, path, random_reward = 0, optimal_reward = 1,
                  epochs=10, batch_size=64, lr=1e-3,
-                 subsample=1., rtol=1e-5, verbose=False):
+                 subsample=1., negative_sampling=1, verbose=False):
 
         assert 0 <= subsample <= 1, f"subsample must be in [0;1] but is {subsample}."
+
+        self.train_distance_embedding(epochs, batch_size, lr, negative_sampling, verbose)
 
         self.train_behavior_policy(epochs, batch_size, lr, verbose)
 
@@ -72,16 +85,19 @@ class Evaluator():
         ep_lengths = self.get_episode_lengths()
         entropies = self.get_bc_entropy()
 
-        unique_states_episode = self.get_unique_states_episode(rtol)
-        unique_states = self.get_unique_states(rtol)
+        #self.plot_similarity_distance()
+
+        unique_states_episode = [self.get_pseudo_coverage()]
+        similarity_distance = self.get_similarity_distance()
 
         normalized_reward = self.get_normalized_rewards(rewards, random_reward, optimal_reward)
 
-        share_unique_states = [us / ep_lengths[i] for i, us in enumerate(unique_states_episode)]
+        share_unique_states = [0,]
 
+        """
         plot_histograms(output, normalized_reward, ep_lengths, share_unique_states, entropies, self.actions,
                         sparsity)
-
+        """
         print("-"*50)
         print("Min / Mean / Max Return: \t\t", f"{round(np.min(rewards), 2)} / {round(np.mean(rewards), 2)} "
                                              f"/ {round(np.max(rewards), 2)}")
@@ -99,7 +115,7 @@ class Evaluator():
         print("Min / Mean / Max Unique States per Episode: \t", f"{round(np.min(unique_states_episode), 2)} / "
                                                f"{round(np.mean(unique_states_episode), 2)} "
                                                f"/ {round(np.max(unique_states_episode), 2)}")
-        print("Unique states in dataset: \t", f"{round(unique_states, 5)}")
+        print("similarity distance: \t", f"{round(similarity_distance, 5)}")
         print("-" * 50)
 
         return [self.environment, self.buffer_type,
@@ -107,7 +123,7 @@ class Evaluator():
                 (np.mean(entropies), np.std(entropies)),
                 (np.mean(sparsity), np.std(sparsity)), (np.mean(ep_lengths), np.std(ep_lengths)),
                 (np.mean(unique_states_episode), np.std(unique_states_episode)),
-                (np.mean(share_unique_states), np.std(share_unique_states)), unique_states]
+                (np.mean(share_unique_states), np.std(share_unique_states)), similarity_distance]
 
     def get_rewards(self):
 
@@ -160,45 +176,163 @@ class Evaluator():
                         shuffle=False, num_workers=self.workers)
 
         for x, _ in dl:
+            x = x.to(next(self.behavioral.parameters()).device)
             entropies.extend(entropy(self.behavioral(x)))
 
         # calculate maximum entropy and normalize
-        max_entropy = entropy(torch.ones((1, self.num_actions)) / self.num_actions)
-        entropies = np.asarray(entropies) / max_entropy
+        #max_entropy = entropy(torch.ones((1, self.num_actions)) / self.num_actions)
+        entropies = np.asarray(entropies) #/ max_entropy
 
         return entropies
 
-    def get_unique_states_episode(self, rtol=1e-5):
-        unique_states_episode, unique = [], []
-        for i, done in tqdm(enumerate(self.dones),
-                            desc=f"Search for Unique States per Episode ({self.environment} @ {self.buffer_type})",
-                            total=len(self.dones)):
+    def get_similarity_distance(self):
+        states = torch.FloatTensor(self.states)
+        with torch.no_grad():
+            states = states.to(next(self.behavioral.parameters()).device)
+            states = self.state_embedding.embed(states).cpu().numpy()
+
+        rng = np.random.default_rng(self.seed)
+
+        ep_distances = []
+        general_distances = []
+
+        dones = []
+        for d, done in enumerate(self.dones):
             if done:
-                unique_states_episode.append(len(unique))
-                unique = []
+                dones.append(d + 1)
 
-            found = False
-            for unique_state in unique:
-                if np.allclose(self.states[i], unique_state, atol=rtol, rtol=rtol):
-                    found = True
-                    break
-            if not found:
-                unique.append(self.states[i])
+        start = 0
+        for end in dones:
+            ep_states = states[start:end]
+            for s, state in enumerate(ep_states):
+                idx = rng.integers(len(ep_states))
+                # in case the same state is sampled by chance
+                while idx == s or np.allclose(state, ep_states[idx]):
+                    idx = rng.integers(len(ep_states))
+                    if len(ep_states) == 1:
+                        break
+                if np.allclose(state, ep_states[idx]):
+                    continue
+                distance = (state - ep_states[idx]).reshape(-1,)
+                ep_distances.append(np.linalg.norm(distance))
+            start = end
 
-        return unique_states_episode
+        for s, state in enumerate(states):
+            idx = rng.integers(len(states))
+            # in case the same state is sampled by chance
+            while idx == s:
+                idx = rng.integers(len(states))
+            distance = (state - states[idx]).reshape(-1, )
+            general_distances.append(np.linalg.norm(distance))
 
-    def get_unique_states(self, rtol=1e-5):
+        return np.mean(general_distances) / np.mean(ep_distances)
+
+    def get_state_pseudo_coverage(self, no_cells=100):
+
+        states = torch.FloatTensor(self.states)
+        with torch.no_grad():
+            states = states.to(next(self.state_embedding.parameters()).device)
+            states = self.state_embedding.embed(states).cpu().numpy()
+
+        grid = np.zeros((no_cells, no_cells))
+        states[:, 0] -= np.min(states[:, 0])
+        states[:, 1] -= np.min(states[:, 1])
+        states[:, 0] = states[:, 0] / np.max(states[:, 0]) * no_cells
+        states[:, 1] = states[:, 1] / np.max(states[:, 1]) * no_cells
+
+        for state in states:
+            # adjust for the maximum outer most points!
+            x = min(int(state[0]), no_cells - 1)
+            y = min(int(state[1]), no_cells - 1)
+            grid[x, y] = 1
+
+        return np.sum(grid) / no_cells**2
+
+    def get_state_action_pseudo_coverage(self, no_cells=100):
+
+        states = torch.FloatTensor(self.states + self.actions)
+        with torch.no_grad():
+            states = states.to(next(self.state_action_embedding.parameters()).device)
+            states = self.state_action_embedding.embed(states).cpu().numpy()
+
+        grid = np.zeros((no_cells, no_cells))
+        states[:, 0] -= np.min(states[:, 0])
+        states[:, 1] -= np.min(states[:, 1])
+        states[:, 0] = states[:, 0] / np.max(states[:, 0]) * no_cells
+        states[:, 1] = states[:, 1] / np.max(states[:, 1]) * no_cells
+
+        for state in states:
+            # adjust for the maximum outer most points!
+            x = min(int(state[0]), no_cells - 1)
+            y = min(int(state[1]), no_cells - 1)
+            grid[x, y] = 1
+
+        return np.sum(grid) / no_cells**2
+
+    def plot_state_actions(self):
+
+        states = torch.FloatTensor(self.states + self.actions)
+        with torch.no_grad():
+            states = states.to(next(self.behavioral.parameters()).device)
+            states = self.state_action_embedding.embed(states).cpu().numpy()
+        self._plot_states(states)
+
+    def plot_states(self):
+
+        states = torch.FloatTensor(self.states)
+        with torch.no_grad():
+            states = states.to(next(self.behavioral.parameters()).device)
+            states = self.state_embedding.embed(states).cpu().numpy()
+        self._plot_states(states)
+
+    def _plot_states(self, states):
+        plt.scatter(states[:, 0], states[:, 1])
+
+        dones = []
+        for d, done in enumerate(self.dones):
+            if done:
+                dones.append(d + 1)
+
+        plt.title(f"{self.environment} @ {self.buffer_type}")
+        plt.xlabel("dim 1")
+        plt.ylabel("dim 2")
+        plt.plot(states[:dones[0], 0], states[:dones[0], 1], "-o", color="black")
+        plt.plot(states[dones[len(dones) // 2]:dones[len(dones) // 2 + 1], 0],
+                 states[dones[len(dones) // 2]:dones[len(dones) // 2 + 1], 1], "-o", color="red")
+        plt.plot(states[dones[-2]:dones[-1], 0], states[dones[-2]:dones[-1], 1], "-o", color="blue")
+        plt.plot(states[0, 0], states[0, 1], "*", color="black", markersize=12)
+        plt.plot(states[dones[len(dones) // 2], 0], states[dones[len(dones) // 2], 1], "*", color="red", markersize=12)
+        plt.plot(states[dones[-2], 0], states[dones[-2], 1], marker="*", color="blue", markersize=12)
+
+        plt.show()
+
+    def get_unique_states(self):
         unique = []
         for i, done in tqdm(enumerate(self.dones),
                             desc=f"Search for Unique States in whole dataset ({self.environment} @ {self.buffer_type})",
                             total=len(self.dones)):
             found = False
             for unique_state in unique:
-                if np.allclose(self.states[i], unique_state, atol=rtol, rtol=rtol):
+                if np.allclose(self.states[i], unique_state):
                     found = True
                     break
             if not found:
                 unique.append(self.states[i])
+
+        return len(unique)
+
+    def get_unique_state_actions(self):
+        unique = []
+        for i, done in tqdm(enumerate(self.dones),
+                            desc=f"Search for Unique State-Action pairs in whole dataset ({self.environment} @ {self.buffer_type})",
+                            total=len(self.dones)):
+            found = False
+            for unique_state_action in unique:
+                if np.allclose(self.states[i] + self.actions[i], unique_state_action):
+                    found = True
+                    break
+            if not found:
+                unique.append(self.states[i] + self.actions[i])
 
         return len(unique)
 
@@ -220,7 +354,47 @@ class Evaluator():
 
         self.behavioral_trained = True
 
+    def train_state_embedding(self, epochs=10, batch_size=64, lr=1e-3, negative_sampling=1, verbose=False):
 
+        dl = DataLoader(StateEmbeddingSet(states=self.states, dones=self.dones, seed=self.seed,
+                                     negative_sampling=negative_sampling),
+                        batch_size=batch_size, drop_last=True,
+                        shuffle=True, num_workers=self.workers)
+
+        optimizer = Adam(self.state_embedding.parameters(), lr=lr)
+        loss = nn.BCELoss()
+
+        if verbose:
+            print(f"Inital loss:", evaluate(self.state_embedding, dl, loss))
+
+        for ep in tqdm(range(epochs), desc=f"Training State Embedding ({self.environment} @ {self.buffer_type})"):
+            errs = update(self.state_embedding, dl, loss, optimizer)
+
+            if verbose:
+                print(f"Epoch: {ep+1}, loss: {np.mean(errs)}")
+
+        self.state_embedding_trained = True
+
+    def train_state_action_embedding(self, epochs=10, batch_size=64, lr=1e-3, negative_sampling=1, verbose=False):
+
+        dl = DataLoader(StateActionEmbeddingSet(states=self.states, actions=self.actions, dones=self.dones,
+                                                seed=self.seed, negative_sampling=negative_sampling),
+                        batch_size=batch_size, drop_last=True,
+                        shuffle=True, num_workers=self.workers)
+
+        optimizer = Adam(self.state_action_embedding.parameters(), lr=lr)
+        loss = nn.BCELoss()
+
+        if verbose:
+            print(f"Inital loss:", evaluate(self.state_action_embedding, dl, loss))
+
+        for ep in tqdm(range(epochs), desc=f"Training State-Action Embedding ({self.environment} @ {self.buffer_type})"):
+            errs = update(self.state_action_embedding, dl, loss, optimizer)
+
+            if verbose:
+                print(f"Epoch: {ep+1}, loss: {np.mean(errs)}")
+
+        self.state_action_embedding_trained = True
 
 
 

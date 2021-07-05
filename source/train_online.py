@@ -43,8 +43,7 @@ def train_online(experiment, agent_type="DQN", discount=0.95, envid='CartPole-v1
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    ep_rewards = []
-    all_rewards, all_dev_mean, all_dev_std = [], [], []
+    ep_rewards, all_rewards, all_dev_mean, all_dev_std = [], [], [], []
     done = True
     ep = 0
 

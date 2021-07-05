@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 def entropy(values):
     probs = F.softmax(values, dim=1).detach().cpu().numpy()
-    return -np.sum(probs * np.log(probs), axis=1)
+    return -np.sum(probs * np.log(probs) / np.log(probs.shape[1]), axis=1)
 
 def cosine_similarity(v1, v2):
     n1 = np.linalg.norm(v1)

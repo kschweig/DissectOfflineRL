@@ -7,9 +7,14 @@ from torch.utils.data import DataLoader
 def _forward(network: nn.Module, data: DataLoader, metric: callable):
 
     for x, y in data:
-        x = x.to(next(network.parameters()).device)
+
+        if isinstance(x, list):
+            x = [x_.to(next(network.parameters()).device) for x_ in x]
+        else:
+            x = x.to(next(network.parameters()).device)
 
         y_hat = network.forward(x).cpu()
+
         loss = metric(y_hat, y.view(-1,))
         yield loss
 

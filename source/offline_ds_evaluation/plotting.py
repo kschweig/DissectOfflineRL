@@ -9,7 +9,7 @@ def plot_histograms(output, reward, episode_length, unique_states_episode, entro
     type="png"
 
     fig, axs = plt.subplots(2, 3, figsize=(9,4))
-    axs[0, 0].hist(reward, bins=bins, range=(0, 1))
+    axs[0, 0].hist(reward, bins=bins, range=(0, 1.01))
     axs[0, 0].set_title('Return')
     axs[0, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     axs[0, 0].set_xticks([0, 0.25, 0.5, 0.75, 1])
@@ -19,13 +19,13 @@ def plot_histograms(output, reward, episode_length, unique_states_episode, entro
     axs[0, 1].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     axs[0, 1].locator_params(axis='x', integer=True)
 
-    axs[0, 2].hist(entropy, bins=bins, range=(0, 1))
+    axs[0, 2].hist(entropy, bins=bins, range=(0, 1.01))
     axs[0, 2].set_title('Entropy')
     axs[0, 2].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     axs[0, 2].set_xticks([0, 0.25, 0.5, 0.75, 1])
 
 
-    axs[1, 0].hist(sparsity, bins=bins, range=(0, 1))
+    axs[1, 0].hist(sparsity, bins=bins, range=(0, 1.01))
     axs[1, 0].set_title('Sparsity')
     axs[1, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     axs[1, 0].set_xticks([0, 0.25, 0.5, 0.75, 1])
@@ -35,7 +35,7 @@ def plot_histograms(output, reward, episode_length, unique_states_episode, entro
     axs[1, 1].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     axs[1, 1].locator_params(axis='x', integer=True)
 
-    axs[1, 2].hist(unique_states_episode, bins=bins, range=(0, 1))
+    axs[1, 2].hist(unique_states_episode, bins=bins, range=(0, 1.01))
     axs[1, 2].set_title('Uniqueness')
     axs[1, 2].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     axs[1, 2].locator_params(axis='x', integer=True)
@@ -44,3 +44,5 @@ def plot_histograms(output, reward, episode_length, unique_states_episode, entro
     plt.tight_layout()
     plt.savefig(output+"."+type)
     plt.show()
+
+
