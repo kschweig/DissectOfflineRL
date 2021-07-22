@@ -10,7 +10,7 @@ import re
 # Which experiment to extract
 import tensorflow.python.framework.errors_impl
 
-ex = "ex6"
+ex = "ex4"
 # Which tag should be extracted
 #'eval/Reward (SMA)' 'eval/Entropy'
 tags = ['eval/Reward (SMA)', 'eval/Action-Value deviation (mean) (SMA)']

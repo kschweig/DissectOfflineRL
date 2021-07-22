@@ -14,7 +14,7 @@ envs = ['Breakout-MinAtar-v0', "Space_invaders-MinAtar-v0"]
 discounts = [0.99, 0.99]
 buffer_types = ["random", "mixed", "er", "noisy", "fully"]
 agent_types = ["BC", "BVE", "MCE", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
-multiple_runs = 3
+multiple_runs = 5
 # experiment parameters
 experiment = 4
 seed = 42
@@ -25,9 +25,7 @@ transitions_online = 100000
 transitions_offline = 2 * transitions_online
 batch_size = 128
 lr = [1e-4] * len(agent_types)
-# parameters for evaluation
-random_rewards = [0, 0]
-optimal_rewards = [10, 20]
+
 
 def create_ds(args):
     envid, discount = args
@@ -60,8 +58,7 @@ def assess_env(args):
         evaluator = Evaluator(envid, buffer_type, buffer.state, buffer.action, buffer.reward,
                               np.invert(buffer.not_done))
 
-        path = os.path.join("results", "ds_eval", f"{envid}_{buffer_type}")
-        data = evaluator.evaluate(path, random_rewards[e], optimal_rewards[e], epochs=10)
+        data = evaluator.evaluate(epochs=10)
 
         results.append(data)
         mm.append(data)

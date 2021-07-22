@@ -56,8 +56,21 @@ class RestrictMiniGridActionWrapper(gym.core.ActionWrapper):
     """
     def __init__(self, env):
         super(RestrictMiniGridActionWrapper, self).__init__(env)
-
         self.action_space = gym.spaces.Discrete(3)
+
+    def action(self, action):
+        return action
+
+class RestrictMinAtarActionWraper(gym.core.ActionWrapper):
+    """
+    restrict to the minimal actions for the respective minatar environment
+    """
+    def __init__(self, env):
+        super(RestrictMinAtarActionWraper, self).__init__(env)
+
+        self.action_space = gym.spaces.Discrete(len(env.game.env.minimal_action_set()))
+        env.game.env.action_map = [env.game.env.action_map[i] for i in env.game.env.minimal_action_set()]
+        # print(env.game_name, env.game.env.action_map)
 
     def action(self, action):
         return action

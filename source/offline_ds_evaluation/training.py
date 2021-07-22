@@ -15,7 +15,14 @@ def _forward(network: nn.Module, data: DataLoader, metric: callable):
 
         y_hat = network.forward(x).cpu()
 
-        loss = metric(y_hat, y.view(-1,))
+        batch_size = y_hat.shape[0]
+
+        if len(y.view(-1)) > batch_size:
+            y = y.reshape(batch_size, -1)
+        else:
+            y = y.reshape(-1)
+
+        loss = metric(y_hat, y)
         yield loss
 
 

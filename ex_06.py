@@ -25,9 +25,6 @@ transitions_online = 100000
 transitions_offline = 2 * transitions_online
 batch_size = 128
 lr = [1e-4] * len(agent_types)
-# parameters for evaluation
-random_rewards = [20, 0]
-optimal_rewards = [500, 0.95]
 
 
 def create_ds(args):
@@ -52,6 +49,19 @@ def assess_env(args):
 
     os.makedirs(os.path.join("results", "ds_eval"), exist_ok=True)
 
+    """
+    with open(os.path.join("data", f"ex{experiment}", f"{envid}_run1_er.pkl"), "rb") as f:
+        buffer = pickle.load(f)
+    state_limits = []
+    for axis in range(len(buffer.state[0])):
+        state_limits.append(np.min(buffer.state[:, axis]))
+        state_limits.append(np.max(buffer.state[:, axis]))
+    action_limits = []
+    for axis in range(len(buffer.state[0])):
+        action_limits.append(np.min(buffer.state[:, axis] + buffer.action[:, 0]))
+        action_limits.append(np.max(buffer.state[:, axis] + buffer.action[:, 0]))
+    """
+
     results = []
     mm = MetricsManager(experiment)
     for buffer_type in buffer_types:
@@ -61,8 +71,7 @@ def assess_env(args):
         evaluator = Evaluator(envid, buffer_type, buffer.state, buffer.action, buffer.reward,
                               np.invert(buffer.not_done))
 
-        path = os.path.join("results", "ds_eval", f"{envid}_{buffer_type}")
-        data = evaluator.evaluate(path, random_rewards[e], optimal_rewards[e], epochs=10)
+        data = evaluator.evaluate(epochs=10)
 
         results.append(data)
         mm.append(data)

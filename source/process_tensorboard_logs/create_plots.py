@@ -41,19 +41,17 @@ algos = ["BC", "BVE", "MCE", "DQN", "QRDQN", "REM", "BCQ", "CQL", "CRR"]
 buffer = {"random": "Random Policy", "mixed": "Mixed Policy", "er": "Experience Replay",
           "noisy": "Noisy Policy", "fully": "Final Policy"}
 
-random_rewards = [0, -200, 0, -1, 0, 0]
-optimal_rewards = [500, -90, 0.95, 0.965, 8, 20]
-
 y_bounds = {'CartPole-v1': (-15, 15), "MiniGrid-LavaGapS7-v0":(-0.5, 1.3), 'MountainCar-v0': (-50, 100),
             "MiniGrid-Dynamic-Obstacles-8x8-v0":(-1, 1), 'Breakout-MinAtar-v0': (-5, 25), "Space_invaders-MinAtar-v0": (-5, 25)}
 
-metrics = {(1,0):"Normalized Return", (1,1):"Normalized Return (std)", (2,0):"Entropy",
-           (2,1):"Entropy (std)", (4,0):"Episode Length", (4,1):"Episode Length (std)",
-           (5,0):"Unique States per Episode (mean)", (5,1):"Unique States per Episode (std)",
-           (6,0):"Uniqueness (mean)", (6,1):"Uniqueness (std)", 7:"Unique States"}
+metrics = {(0,0):"Return", (0,1):"Return (std)",
+           1:"Unique States", 2:"Unique State-Action Pairs",
+           (3,0):"Entropy", (3,1):"Entropy (std)",
+           (4,0):"Sparsity", (4,1): "Sparsity (std)",
+           (5,0):"Episode Length", (5,1):"Episode Length (std)",
+           }
 
 annotations = ["(R)", "(M)", "(E)", "(N)", "(F)"]
-
 
 
 def plt_csv(ax, csv, algo, mode, ylims=None, set_title=True, color=None, set_label=True):
@@ -77,7 +75,7 @@ def plt_csv(ax, csv, algo, mode, ylims=None, set_title=True, color=None, set_lab
 mark = "return"
 
 # titles
-y_label = "Normalized Return"
+y_label = "Return"
 x_label = "Update Steps"
 
 indir = os.path.join("..", "..", "results", "csv", mark)
@@ -109,10 +107,6 @@ for file in files:
     if not data[env].keys() or mode not in data[env].keys():
         data[env][mode] = dict()
 
-    # normalize reward
-    csv -= random_rewards[envs[env]]
-    csv /= (optimal_rewards[envs[env]] - random_rewards[envs[env]])
-
     data[env][mode][algo] = csv
 
 for env in data.keys():
@@ -128,22 +122,20 @@ for env in data.keys():
         ids = list(buffer.keys())
         ax = axs[ids.index(mode)]
 
-        norm = (mm.get_data(env, mode)[0][0] - random_rewards[envs[env]] ) / (optimal_rewards[envs[env]] - random_rewards[envs[env]])
+        norm = mm.get_data(env, mode)[0][0]
         ax.axhline(y=norm, color="black", linestyle="dotted",
                    linewidth=2, label=("Behav." if m==0 else None))
                    
         csv = data[env]["online"]["DQN"]
         ax.axhline(y=csv.max(), color="black", linewidth=2)
-        plt_csv(ax, csv, "Online", mode, ylims=(-0.05, 1.05), color="black", set_label=m==0)
+        plt_csv(ax, csv, "Online", mode, color="black", set_label=m==0)
 
         for a, algo in enumerate(algos):
             csv = data[env][mode][algo]
-            plt_csv(ax, csv, algo, mode, ylims=(-0.05, 1.05), color=f"C{a}", set_label=m==0)
+            plt_csv(ax, csv, algo, mode, color=f"C{a}", set_label=m==0)
 
     for ax in axs[m:]:
         f.delaxes(ax)
-
-    #axs[2].xaxis.set_tick_params(labelbottom=True)
 
     f.legend(loc="lower right", bbox_to_anchor=(0.89, 0.06))
     f.tight_layout(rect=(0.008, 0, 1, 1))
@@ -309,7 +301,7 @@ for metric in metrics.keys():
         for a, algo in enumerate(algos_):
             x, y, sd = [], [], []
             for mode in modes:
-                if metric == 7:
+                if metric == 1 or metric == 2:
                     x.append(mm.get_data(env, mode)[metric])
                 else:
                     x.append(mm.get_data(env, mode)[metric[0]][metric[1]])
@@ -326,7 +318,7 @@ for metric in metrics.keys():
 
         xmax, xmin, x_ = 0, 9e9, []
         for m, mode in enumerate(modes):
-            if metric == 7:
+            if metric == 1 or metric == 2:
                 x = mm.get_data(env, mode)[metric]
             else:
                 x = mm.get_data(env, mode)[metric[0]][metric[1]]
@@ -354,8 +346,9 @@ for metric in metrics.keys():
 
         # position text
         _, _, ymin, ymax = ax.axis()
+        ax.set_ylim(ymin - (ymax - ymin) * 0.08, ymax)
         for m, x in enumerate(x_):
-            ax.text(x, ymin + (ymax - ymin)*0.03, annotations[m], ha="center")
+            ax.text(x, ymin - (ymax - ymin) * 0.05, annotations[m], ha="center")
 
         ax.axhline(y=0, color="black", linestyle="dotted", label=("True" if e == 0 else None))
 
@@ -452,10 +445,6 @@ for file in files:
     if not data[env].keys() or mode not in data[env].keys():
         data[env][mode] = dict()
 
-    # normalize reward
-    csv -= random_rewards[envs[env]]
-    csv /= (optimal_rewards[envs[env]] - random_rewards[envs[env]])
-
     data[env][mode][algo] = (np.mean(csv, axis=1).max(), np.std(csv, axis=1)[np.argmax(np.mean(csv, axis=1))])
 
 ###############
@@ -463,13 +452,13 @@ for file in files:
 ###############
 
 # titles
-y_label = "Normalized Return"
+y_label = "Return"
 x_label = "Buffer Types"
 
 
 for metric in metrics.keys():
 
-    f, axs = plt.subplots(2, 3, figsize=figsize, sharey=True)
+    f, axs = plt.subplots(2, 3, figsize=figsize)
     axs = [item for sublist in zip(axs[0], axs[1]) for item in sublist]
 
     for e, env in enumerate(envs):
@@ -480,7 +469,7 @@ for metric in metrics.keys():
         for a, algo in enumerate(algos):
             x, y, sd = [], [], []
             for mode in modes:
-                if metric == 7:
+                if metric == 1 or metric == 2:
                     x.append(mm.get_data(env, mode)[metric])
                 else:
                     x.append(mm.get_data(env, mode)[metric[0]][metric[1]])
@@ -495,20 +484,18 @@ for metric in metrics.keys():
 
         x, y = [], []
         for mode in modes:
-            if metric == 7:
+            if metric == 1 or metric == 2:
                 x.append(mm.get_data(env, mode)[metric])
             else:
                 x.append(mm.get_data(env, mode)[metric[0]][metric[1]])
-            y.append(mm.get_data(env, mode)[1][0])
+            y.append(mm.get_data(env, mode)[0][0])
         x, y = [list(tuple) for tuple in zip(*sorted(zip(x, y)))]
 
         ax.plot(x, y, "o-", linestyle="dotted", label=("Behav." if e==0 else None), color="black")
 
-        ax.set_ylim(-0.15, 1.05)
-
         xmax, xmin, x_ = 0, 9e9, []
         for m, mode in enumerate(modes):
-            if metric == 7:
+            if metric == 1 or metric == 2:
                 x = mm.get_data(env, mode)[metric]
             else:
                 x = mm.get_data(env, mode)[metric[0]][metric[1]]
@@ -536,8 +523,9 @@ for metric in metrics.keys():
 
         # position text
         _, _, ymin, ymax = ax.axis()
+        ax.set_ylim(ymin - (ymax - ymin) * 0.08, ymax)
         for m, x in enumerate(x_):
-            ax.text(x, ymin + (ymax - ymin)*0.03, annotations[m], ha="center")
+            ax.text(x, ymin - (ymax - ymin)*0.05, annotations[m], ha="center")
 
         # Online Policy
         csv = data[env]["online"]["DQN"]
@@ -552,7 +540,7 @@ for metric in metrics.keys():
     plt.close()
 
 # plot for modes
-f, axs = plt.subplots(2, 3, figsize=figsize, sharey=True, sharex=True)
+f, axs = plt.subplots(2, 3, figsize=figsize, sharex=True)
 axs = [item for sublist in zip(axs[0], axs[1]) for item in sublist]
 
 for e, env in enumerate(envs):
@@ -562,7 +550,7 @@ for e, env in enumerate(envs):
 
     x, y = list(range(len(buffer))), []
     for mode in modes:
-        y.append(mm.get_data(env, mode)[1][0])
+        y.append(mm.get_data(env, mode)[0][0])
     x, y = [list(tuple) for tuple in zip(*sorted(zip(x, y)))]
 
     ax.plot(x, y, "o-", linestyle="dotted", label=("Behav." if e == 0 else None), color="black")
@@ -587,8 +575,6 @@ for e, env in enumerate(envs):
     x = []
     for m, mode in enumerate(modes):
         x.append(m)
-
-    ax.set_ylim(-0.05, 1.05)
 
     ax.set_xticks(range(len(modes)))
     ax.set_xticklabels([buffer[m] for m in modes], fontsize="x-small", rotation=15, rotation_mode="anchor")

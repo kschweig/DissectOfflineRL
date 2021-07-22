@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
+from sklearn.decomposition import PCA
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -16,11 +17,19 @@ from source.offline_ds_evaluation.evaluator import Evaluator
 from source.utils.utils import get_agent, make_env
 from gym_minigrid.wrappers import ReseedWrapper
 
+test_env = "MountainCar-v0"#"MiniGrid-LavaGapS7-v0"#
 
 # keep training parameters for online training fixed, the experiment does not interfere here.
 seed = 42
-seeds = [seed]
-#seeds = [seed, seed+100, seed+200, seed+300, seed+400]
+seed_list = [[seed],
+             [seed, seed+100, seed+200],
+             [seed, seed+100, seed+200, seed+300, seed+400],
+             []]
+
+# no loop to make it runnable by multiple processes
+seeds = seed_list[3]
+
+embedding_epochs = 10
 batch_size = 32
 buffer_size = 50000
 transitions = buffer_size
@@ -30,17 +39,17 @@ mean_over = 100
 train_every = 1
 train_start_iter = batch_size
 
-writer = SummaryWriter(log_dir=os.path.join("runs", "ex_corr", "MiniGrid-LavaGapS7-v0", "online", "DQN",
+writer = SummaryWriter(log_dir=os.path.join("runs", "ex_corr", test_env, "online", "DQN",
                                             f"{len(seeds)}_seeds"))
-env = make_env("MiniGrid-LavaGapS7-v0")
-eval_env = make_env("MiniGrid-LavaGapS7-v0")
+env = make_env(test_env)
+eval_env = make_env(test_env)
 if len(seeds) > 0:
     env = ReseedWrapper(env, seeds=seeds)
     eval_env = ReseedWrapper(eval_env, seeds=seeds)
 
 obs_space = len(env.observation_space.high)
 
-agent = get_agent("DQN", obs_space, env.action_space.n, 0.95, lr, seed)
+agent = get_agent("DQN", obs_space, env.action_space.n, 0.99, lr, seed)
 
 # two buffers, one for learning, one for storing all transitions!
 probas = [0, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1]
@@ -121,8 +130,8 @@ for iteration in tqdm(range(transitions), desc=f"Behavioral policy"):
                                                           all_dev_mean, all_dev_std, over_episodes=mean_over)
 
 # save ER-buffer for further processing
-os.makedirs(os.path.join("data", "ex_corr", f"{len(seeds)}_seeds"), exist_ok=True)
-with open(os.path.join("data", "ex_corr", f"{len(seeds)}_seeds", f"er_buffer.pkl"), "wb") as f:
+os.makedirs(os.path.join("data", "ex_corr", test_env, f"{len(seeds)}_seeds"), exist_ok=True)
+with open(os.path.join("data", "ex_corr", test_env, f"{len(seeds)}_seeds", f"er_buffer.pkl"), "wb") as f:
     pickle.dump(er_buffer, f)
 
 for buffer, eps in zip([test_0, test_01, test_05, test_10, test_25, test_50, test_75, test_100], probas):
@@ -139,71 +148,163 @@ for buffer, eps in zip([test_0, test_01, test_05, test_10, test_25, test_50, tes
 
         state = next_state
 
-    os.makedirs(os.path.join("data", "ex_corr", f"{len(seeds)}_seeds"), exist_ok=True)
-    with open(os.path.join("data", "ex_corr", f"{len(seeds)}_seeds", f"test_{int(eps*100)}.pkl"), "wb") as f:
+    os.makedirs(os.path.join("data", "ex_corr", test_env, f"{len(seeds)}_seeds"), exist_ok=True)
+    with open(os.path.join("data", "ex_corr", test_env, f"{len(seeds)}_seeds", f"test_{int(eps*100)}.pkl"), "wb") as f:
         pickle.dump(buffer, f)
-
 """
 
-names = ["er_buffer", "test_0", "test_1", "test_5", "test_10", "test_25", "test_50", "test_75", "test_100"]
-rewards, entropies, randomness = [], [], []
-unique_states, unique_state_actions, state_coverages, state_action_coverages = [], [], [], []
 
-for name in names:
-    with open(os.path.join("data", "ex_corr", f"{len(seeds)}_seeds", name + ".pkl"), "rb") as f:
+names = ["er_buffer", "test_0", "test_1", "test_5", "test_10", "test_25", "test_50", "test_75", "test_100"]
+rewards, entropies, randomness, unique_states, unique_state_actions = [], [], [], [], []
+hll_states, hll_state_actions = [], []
+
+# load training data
+with open(os.path.join("data", "ex_corr", test_env, f"{len(seeds)}_seeds", "er_buffer" + ".pkl"), "rb") as f:
+    buffer = pickle.load(f)
+limits = []
+for axis in range(len(buffer.state[0])):
+    limits.append(np.min(buffer.state[:,axis]))
+    limits.append(np.max(buffer.state[:, axis]))
+
+for n, name in enumerate(names):
+    with open(os.path.join("data", "ex_corr", test_env, f"{len(seeds)}_seeds", name + ".pkl"), "rb") as f:
         buffer = pickle.load(f)
 
-    evaluator = Evaluator("MiniGrid-LavaGapS7-v0", name, buffer.state, buffer.action, buffer.reward,
-                          np.invert(buffer.not_done))
+    evaluator = Evaluator(test_env, name, buffer.state, buffer.action, buffer.reward, np.invert(buffer.not_done))
 
-    evaluator.train_state_embedding(epochs=10)
-    evaluator.train_state_action_embedding(epochs=10)
-    evaluator.train_behavior_policy(epochs=5)
+    evaluator.train_behavior_policy(epochs=embedding_epochs)
 
-    evaluator.plot_states()
-    evaluator.plot_state_actions()
-
-    rewards.append(np.mean(evaluator.get_rewards()) / 0.95)
+    rewards.append(np.mean(evaluator.get_rewards()))
     entropy = np.mean(evaluator.get_bc_entropy())
     entropies.append(entropy)
 
-    unique_states.append(evaluator.get_unique_states())
-    unique_state_actions.append(evaluator.get_unique_state_actions())
-    state_coverages.append(evaluator.get_state_pseudo_coverage())
-    state_action_coverages.append(evaluator.get_state_action_pseudo_coverage())
-    
-    print(name, rewards[-1], entropies[-1], unique_states[-1], state_coverages[-1], unique_state_actions[-1], state_action_coverages[-1])
+    if test_env == "MiniGrid-LavaGapS7-v0":
+        hll_states.append(evaluator.get_unique_states())
+        hll_state_actions.append(evaluator.get_unique_state_actions())
+        unique_states.append(evaluator.get_unique_states_exact())
+        unique_state_actions.append(evaluator.get_unique_state_actions_exact())
+    else:
+        hll_states.append(evaluator.get_unique_states(limits=limits))
+        hll_state_actions.append(evaluator.get_unique_state_actions(limits=limits))
+        unique_states.append(hll_states[-1])
+        unique_state_actions.append(hll_state_actions[-1])
 
-# plotting
-f, axs = plt.subplots(1, 3, figsize=(12, 4))
+    print(name, rewards[n], entropies[n], "/", unique_states[n], hll_states[n], "/",
+          unique_state_actions[n], hll_state_actions[n])
 
-axs[0].plot(probas, entropies[1:], "-o", color="C0", label="entropy")
-axs[0].plot(np.arange(0., 1., 0.01), np.arange(0., 1., 0.01), linestyle="dotted", color="black")
+
+#########################
+#       Plotting        #
+#########################
+os.makedirs(os.path.join("results", "img", "correlation", test_env), exist_ok=True)
+
+### Entropy
+
+plt.figure(figsize=(4.5,4))
+plt.plot(probas, entropies[1:], "-o", color="C0", label="BC")
+plt.plot(np.arange(0., 1., 0.01), np.arange(0., 1., 0.01), linestyle="dotted", color="black")
+plt.xlabel("$\epsilon$")
+plt.ylabel("Entropy")
+plt.legend(loc="lower right", fontsize="x-small")
+plt.title("1 seed" if len(seeds) == 1 else "no seeds" if len(seeds) == 0 else f"{len(seeds)} seeds")
+plt.tight_layout()
+plt.savefig(os.path.join("results", "img", "correlation", test_env, f"entropy_{len(seeds)}_seeds.pdf"))
+plt.close()
+
+### State / State-Action approximation
+
+if test_env == "MiniGrid-LavaGapS7-v0":
+
+    f, axs = plt.subplots(2, 1, figsize=(4, 7))
+
+    xmin = max(np.min(unique_states), np.min(hll_states))
+    xmax = min(np.max(unique_states), np.max(hll_states))
+    ymin = xmin
+    ymax = xmax
+    axs[0].plot(unique_states[1:], hll_states[1:], "-o", color="C1", label="HLL")
+    axs[0].plot(np.arange(xmin, xmax, (xmax - xmin) / 100)[:100], np.arange(ymin, ymax, (ymax - ymin) / 100)[:100],
+                linestyle="dotted", color="black")
+    axs[0].set_xlabel("Unique States (exact)")
+    axs[0].set_ylabel("Unique States estimate")
+    axs[0].legend(loc="lower right", fontsize="x-small")
+    axs[0].ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+    axs[0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    xmin = max(np.min(unique_state_actions), np.min(hll_state_actions))
+    xmax = min(np.max(unique_state_actions), np.max(hll_state_actions))
+    ymin = xmin
+    ymax = xmax
+    axs[1].plot(unique_state_actions[1:], hll_state_actions[1:], "-o", color="C1", label="HLL")
+    axs[1].plot(np.arange(xmin, xmax, (xmax - xmin) / 100)[:100], np.arange(ymin, ymax, (ymax - ymin) / 100)[:100],
+                linestyle="dotted", color="black")
+    axs[1].set_xlabel("Unique State-Actions (exact)")
+    axs[1].set_ylabel("Unique State-Actions estimate")
+    axs[1].legend(loc="lower right", fontsize="x-small")
+    axs[1].ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+    axs[1].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    plt.suptitle("1 seed" if len(seeds) == 1 else "no seeds" if len(seeds) == 0 else f"{len(seeds)} seeds")
+    f.tight_layout()
+    plt.savefig(os.path.join("results", "img", "correlation", test_env, f"approx_quality_{len(seeds)}_seeds.pdf"))
+    plt.close()
+
+### epsilon dependence on State and State-Action
+
+f, axs = plt.subplots(2, 1, figsize=(4, 7))
+
+axs[0].plot(probas, hll_states[1:], "-o", color="C2", label="HLL")
+axs[0].axhline(y=hll_states[0], color="C3", label="er_buffer")
 axs[0].set_xlabel("$\epsilon$")
-axs[0].set_ylabel("Entropy")
+axs[0].set_ylabel("Unique States estimate")
+axs[0].legend(loc="lower right", fontsize="x-small")
+axs[0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
-xmin = max(np.min(unique_states), np.min(state_coverages) * 100**2)
-xmax = min(np.max(unique_states), np.max(state_coverages) * 100**2)
-ymin = max(np.min(unique_states) / 100**2, np.min(state_coverages))
-ymax = min(np.max(unique_states) / 100**2, np.max(state_coverages))
-axs[1].plot(unique_states[1:], state_coverages[1:], "-o", color="C1", label="state coverage")
-axs[1].plot(np.arange(xmin, xmax, (xmax - xmin) / 100), np.arange(ymin, ymax, (ymax - ymin) / 100),
-            linestyle="dotted", color="black")
-axs[1].set_xlabel("Unique States")
-axs[1].set_ylabel("Pseudo-State-Coverage")
+axs[1].plot(probas, hll_state_actions[1:], "-o", color="C2", label="HLL")
+axs[1].axhline(y=hll_state_actions[0], color="C3", label="er_buffer")
+axs[1].set_xlabel("$\epsilon$")
+axs[1].set_ylabel("Unique State-Actions estimate")
+axs[1].legend(loc="lower right", fontsize="x-small")
 axs[1].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
-xmin = max(np.min(unique_state_actions), np.min(state_action_coverages) * 100**2)
-xmax = min(np.max(unique_state_actions), np.max(state_action_coverages) * 100**2)
-ymin = max(np.min(unique_state_actions) / 100**2, np.min(state_action_coverages))
-ymax = min(np.max(unique_state_actions) / 100**2, np.max(state_action_coverages))
-axs[2].plot(unique_state_actions[1:], state_action_coverages[1:], "-o", color="C2", label="state-action coverage")
-axs[2].plot(np.arange(xmin, xmax, (xmax - xmin) / 100), np.arange(ymin, ymax, (ymax - ymin) / 100),
-            linestyle="dotted", color="black")
-axs[2].set_xlabel("Unique State-Actions")
-axs[2].set_ylabel("Pseudo-State-Action-Coverage")
-axs[2].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
-f.text(0.5, 0.98, "1 seed" if len(seeds) == 1 else f"{len(seeds)} seeds", ha='center', fontsize="large")
+plt.autoscale()
+plt.suptitle("1 seed" if len(seeds) == 1 else "no seeds" if len(seeds) == 0 else f"{len(seeds)} seeds")
 f.tight_layout()
-plt.show()
+plt.savefig(os.path.join("results", "img", "correlation", test_env, f"state_eps_dep_{len(seeds)}_seeds.pdf"))
+plt.close()
+
+### Projections
+
+if test_env == "MiniGrid-LavaGapS7-v0":
+    rng = np.random.default_rng(seed)
+    random_encoder = rng.standard_normal((buffer.state.shape[1], 2))
+else:
+    random_encoder = np.eye(2)
+
+fig, axs = plt.subplots(3, 3, figsize=(13, 12), sharex=True, sharey=True)
+axs = [item for sublist in zip(axs[:, 0], axs[:, 1], axs[:, 2]) for item in sublist]
+
+for n, name in enumerate(names):
+    with open(os.path.join("data", "ex_corr", test_env, f"{len(seeds)}_seeds", name + ".pkl"), "rb") as f:
+        buffer = pickle.load(f)
+
+    buffer.state = buffer.state @ random_encoder
+
+    s = None if test_env == "MiniGrid-LavaGapS7-v0" else 0.5
+    axs[n].scatter(buffer.state[:-1, 0], buffer.state[:-1, 1], c=[f"C{int(a)}" for a in buffer.action[:-1, 0]], s = s)
+
+    if n == 0:
+        axs[n].set_title(name)
+    else:
+        axs[n].set_title(f"$\epsilon$ = {float(name.split('_')[1]) / 100}")
+
+if test_env == "MiniGrid-LavaGapS7-v0":
+    fig.text(0.54, 0.01, 'dim1', ha='center', fontsize=16)
+    fig.text(0.01, 0.5, 'dim2', va='center', rotation='vertical', fontsize=16)
+else:
+    fig.text(0.54, 0.01, 'position', ha='center', fontsize=16)
+    fig.text(0.01, 0.5, 'velocity', va='center', rotation='vertical', fontsize=16)
+
+fig.text(0.50, 0.98, "1 seed" if len(seeds) == 1 else "no seeds" if len(seeds) == 0 else f"{len(seeds)} seeds", fontsize=16)
+fig.tight_layout(rect=(0.02, 0.02, 1, 0.98))
+plt.savefig(os.path.join("results", "img", "correlation", test_env, f"projections_{len(seeds)}_seeds.png"))
+plt.close()

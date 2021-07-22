@@ -7,8 +7,8 @@ def create_latex_table(path, arguments):
                    "Breakout-MinAtar-v0": "breakout", "Space_invaders-MinAtar-v0": "spaceinvaders"}
     buffer = {"er": "Exp. Replay", "fully": "Final Policy", "random": "Random Policy",
               "mixed": "Mixed Policy", "noisy": "Noisy Policy"}
-    results = ["Return", "Return (Norm.)", "Entropy (Norm.)", "Sparsity", "Episode Length",
-               "Unique States / Ep.", "Uniqueness", "Unique States"]
+    results = ["Return", "Unique States", "Unique State-Action Pairs", "Entropy",
+               "Sparsity", "Episode Length"]
 
     with open(path, "w") as f:
         f.write("\\begin{table}[h]\n\\centering\n\\begin{tabular}{l|" + "c"*len(arguments) + "}\n")

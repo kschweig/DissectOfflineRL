@@ -20,9 +20,10 @@ dependencies:
   - tensorflow=2.4.1
   - jupyter
   - pip:
+      - tensorboard
+      - hyperloglog
       - gym
       - gym-minigrid
-      - tensorboard
       - pygame
       - git+https://github.com/ntasfi/PyGame-Learning-Environment.git
       - git+https://github.com/kenjyoung/MinAtar.git

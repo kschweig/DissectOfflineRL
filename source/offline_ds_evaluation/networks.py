@@ -84,8 +84,39 @@ class Embedding(nn.Module):
         out = torch.diag(embedding_1 @ embedding_2.T, diagonal=0) / (torch.linalg.norm(embedding_1, dim=1) *
                                                                      torch.linalg.norm(embedding_2, dim=1))
 
-        # change output range to (0, 1) with sigmoid to be applicable to bceloss
-        out = (out + 1.) / 2.
+        # change output range to (0, 1) with sigmoid to be applicable to bcelosswithlogits
+        return (out + 1.) / 2.
 
-        return torch.sigmoid(out)
+
+class AutoEncoder(nn.Module):
+
+    def __init__(self, num_state, num_embedding, seed):
+        super(AutoEncoder, self).__init__()
+
+        # set seed
+        torch.manual_seed(seed)
+
+        self.num_hidden = 256
+
+        self.embedding = nn.Sequential(
+            nn.Linear(in_features=num_state, out_features=self.num_hidden),
+            nn.SELU(),
+            nn.Linear(in_features=self.num_hidden, out_features=num_embedding))
+
+        self.out = nn.Sequential(
+            nn.Linear(in_features=num_embedding, out_features=self.num_hidden),
+            nn.SELU(),
+            nn.Linear(in_features=self.num_hidden, out_features=num_state))
+
+        for param in self.parameters():
+            if len(param.shape) > 1:
+                torch.nn.init.kaiming_normal_(param, mode='fan_in', nonlinearity='linear')
+
+    def embed(self, state):
+        return self.embedding(state)
+
+    def forward(self, state):
+        embedding = self.embed(state)
+        return self.out(embedding)
+
 
