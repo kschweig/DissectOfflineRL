@@ -13,7 +13,7 @@ from hyperloglog import HyperLogLog
 import matplotlib.pyplot as plt
 from math import sqrt
 import copy
-from .plotting import plot_histograms
+from .plotting import plot_histograms, plot_states
 from .latex import create_latex_table
 
 
@@ -96,44 +96,32 @@ class Evaluator():
 
         self.train_behavior_policy(epochs, batch_size, lr, verbose)
 
-        rewards = self.get_rewards()
-        sparsity = self.get_sparsity()
+        returns = self.get_returns()
+        sparsities = self.get_sparsities()
         ep_lengths = self.get_episode_lengths()
         entropies = self.get_bc_entropy()
 
         unique_states = self.get_unique_states(limits=state_limits)
         unique_state_actions = self.get_unique_state_actions(limits=action_limits)
 
-        """
-        plot_histograms(output, normalized_reward, ep_lengths, share_unique_states, entropies, self.actions,
-                        sparsity)
-        """
-
         print("-"*50)
-        print("Min / Mean / Max Return: \t\t", f"{round(np.min(rewards), 2)} / {round(np.mean(rewards), 2)} "
-                                             f"/ {round(np.max(rewards), 2)}")
+        print("Min / Mean / Max Return: \t\t", f"{round(np.min(returns), 2)} / {round(np.mean(returns), 2)} "
+                                             f"/ {round(np.max(returns), 2)}")
         print("Unique States: \t", f"{unique_states}")
         print("Unique State-Actions: \t", f"{unique_state_actions}")
         print("Min / Mean / Max Entropy: \t", f"{round(np.min(entropies), 2)} / {round(np.mean(entropies), 2)} "
                                               f"/ {round(np.max(entropies), 2)}")
-        print("Min / Mean / Max Sparsity: \t", f"{round(np.min(sparsity), 2)} / "
-                                               f"{round(np.mean(sparsity), 2)} "
-                                               f"/ {round(np.max(sparsity), 2)}")
+        print("Min / Mean / Max Sparsity: \t", f"{round(np.min(sparsities), 2)} / "
+                                               f"{round(np.mean(sparsities), 2)} "
+                                               f"/ {round(np.max(sparsities), 2)}")
         print("Min / Mean / Max Episode Length: \t", f"{round(np.min(ep_lengths), 2)} / "
                                                      f"{round(np.mean(ep_lengths), 2)} "
                                                      f"/ {round(np.max(ep_lengths), 2)}")
         print("-" * 50)
 
-        return [self.environment, self.buffer_type,
-                (np.mean(rewards), np.std(rewards)),
-                unique_states,
-                unique_state_actions,
-                (np.mean(entropies), np.std(entropies)),
-                (np.mean(sparsity), np.std(sparsity)),
-                (np.mean(ep_lengths), np.std(ep_lengths))
-                ]
+        return returns, unique_states, unique_state_actions, entropies, sparsities, ep_lengths
 
-    def get_rewards(self):
+    def get_returns(self):
 
         rewards, ep_reward = list(), 0
 
@@ -152,7 +140,7 @@ class Evaluator():
             normalized_reward.append((reward - random_reward) / (optimal_reward - random_reward))
         return normalized_reward
 
-    def get_sparsity(self):
+    def get_sparsities(self):
 
         sparsity, num_not_obtained = list(), list()
 
@@ -255,7 +243,7 @@ class Evaluator():
         return self.calc_coverage(states, limits, no_cells)
 
     def get_state_action_pseudo_coverage(self, no_cells=100, use_random=False):
-        states = torch.FloatTensor(self.states + self.actions)[:len(self.dones)]
+        states = torch.FloatTensor(np.concatenate((self.states, self.actions), axis=1))[:len(self.dones)]
         with torch.no_grad():
             if use_random:
                 states = states.to(next(self.random_state_action_embedding.parameters()).device)
@@ -284,7 +272,7 @@ class Evaluator():
         return self.calc_coverage(states, self.limits[2], no_cells)
 
     def get_state_action_ae_pseudo_coverage(self, no_cells=100):
-        states = torch.FloatTensor(self.states + self.actions)[:len(self.dones)]
+        states = torch.FloatTensor(np.concatenate((self.states, self.actions), axis=1))[:len(self.dones)]
         with torch.no_grad():
             states = states.to(next(self.state_action_ae.parameters()).device)
             states = self.state_action_ae.embed(states).cpu().numpy()
@@ -335,10 +323,10 @@ class Evaluator():
             else:
                 states = states.to(next(self.state_embedding.parameters()).device)
                 states = self.state_embedding.embed(states).cpu().numpy()
-        self._plot_states(states, path)
+        plot_states(self.environment, self.buffer_type, states, self.dones, path)
 
     def plot_state_actions(self, use_random=False, path=None):
-        states = torch.FloatTensor(self.states + self.actions)[:len(self.dones)]
+        states = torch.FloatTensor(np.concatenate((self.states, self.actions), axis=1))[:len(self.dones)]
         with torch.no_grad():
             if use_random:
                 states = states.to(next(self.random_state_action_embedding.parameters()).device)
@@ -346,49 +334,21 @@ class Evaluator():
             else:
                 states = states.to(next(self.state_action_embedding.parameters()).device)
                 states = self.state_action_embedding.embed(states).cpu().numpy()
-        self._plot_states(states, path)
+        plot_states(self.environment, self.buffer_type, states, self.dones, path)
 
     def plot_states_ae(self, path=None):
         states = torch.FloatTensor(self.states)[:len(self.dones)]
         with torch.no_grad():
             states = states.to(next(self.state_ae.parameters()).device)
             states = self.state_ae.embed(states).cpu().numpy()
-        self._plot_states(states, path)
+        plot_states(self.environment, self.buffer_type, states, self.dones, path)
 
     def plot_state_actions_ae(self, path=None):
-        states = torch.FloatTensor(self.states + self.actions)[:len(self.dones)]
+        states = torch.FloatTensor(np.concatenate((self.states, self.actions), axis=1))[:len(self.dones)]
         with torch.no_grad():
             states = states.to(next(self.state_action_ae.parameters()).device)
             states = self.state_action_ae.embed(states).cpu().numpy()
-        self._plot_states(states, path)
-
-    def _plot_states(self, states, path):
-        plt.figure(figsize=(4,3))
-        plt.scatter(states[:, 0], states[:, 1])
-
-        dones = []
-        for d, done in enumerate(self.dones):
-            if done:
-                dones.append(d + 1)
-
-        plt.title(f"{self.environment} @ {self.buffer_type}")
-        plt.xlabel("dim 1")
-        plt.ylabel("dim 2")
-        plt.plot(states[:dones[0], 0], states[:dones[0], 1], "-o", color="black")
-        plt.plot(states[dones[len(dones) // 2]:dones[len(dones) // 2 + 1], 0],
-                 states[dones[len(dones) // 2]:dones[len(dones) // 2 + 1], 1], "-o", color="red")
-        plt.plot(states[dones[-2]:dones[-1], 0], states[dones[-2]:dones[-1], 1], "-o", color="blue")
-        plt.plot(states[0, 0], states[0, 1], "*", color="black", markersize=12)
-        plt.plot(states[dones[len(dones) // 2], 0], states[dones[len(dones) // 2], 1], "*", color="red", markersize=12)
-        plt.plot(states[dones[-2], 0], states[dones[-2], 1], marker="*", color="blue", markersize=12)
-        plt.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
-        plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
-        if path is None:
-            plt.show()
-        else:
-            plt.savefig(os.path.join(path))
-        plt.close()
+        plot_states(self.environment, self.buffer_type, states, self.dones, path)
 
     def get_unique_states(self, states=None, limits=None):
         if states is None:
@@ -418,36 +378,25 @@ class Evaluator():
         if actions is None:
             actions = copy.deepcopy(self.actions)
 
-        states += actions
+        states = np.concatenate((states, actions), axis=1)
 
         return self.get_unique_states(states, limits)
 
     def get_unique_states_exact(self):
-        unique = []
-        for i, done in tqdm(enumerate(self.dones),
+        unique = set()
+        for i in tqdm(range(len(self.dones)),
                             desc=f"Search exact for Unique States in whole dataset ({self.environment} @ {self.buffer_type})",
                             total=len(self.dones)):
-            found = False
-            for unique_state in unique:
-                if np.allclose(self.states[i], unique_state):
-                    found = True
-                    break
-            if not found:
-                unique.append(self.states[i])
+            unique.add(",".join([str(s) for s in self.states[i]]))
         return len(unique)
 
     def get_unique_state_actions_exact(self):
-        unique = []
-        for i, done in tqdm(enumerate(self.dones),
+        unique = set()
+        states = copy.deepcopy(self.states + self.actions)
+        for i in tqdm(range(len(self.dones)),
                             desc=f"Search exact for Unique State-Action pairs in whole dataset ({self.environment} @ {self.buffer_type})",
                             total=len(self.dones)):
-            found = False
-            for unique_state_action in unique:
-                if np.allclose(self.states[i] + self.actions[i], unique_state_action):
-                    found = True
-                    break
-            if not found:
-                unique.append(self.states[i] + self.actions[i])
+            unique.add(",".join([str(s) for s in states[i]]))
         return len(unique)
 
     def train_behavior_policy(self, epochs=10, batch_size=64, lr=1e-3, verbose=False):

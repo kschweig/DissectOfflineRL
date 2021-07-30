@@ -210,8 +210,8 @@ for n, name in enumerate(names):
     evaluator.plot_state_actions(use_random=True, path=os.path.join("results", "img", "projections", test_env, f"{len(seeds)}seeds", f"nsap_r_{name}.png"))
     evaluator.plot_states_ae(path=os.path.join("results", "img", "projections", test_env, f"{len(seeds)}seeds", f"sae_{name}.png"))
     evaluator.plot_state_actions_ae(path=os.path.join("results", "img", "projections", test_env, f"{len(seeds)}seeds", f"saae_{name}.png"))
-    evaluator._plot_states(pca_states, path=os.path.join("results", "img", "projections", test_env, f"{len(seeds)}seeds", f"spca_{name}.png"))
-    evaluator._plot_states(pca_state_actions, path=os.path.join("results", "img", "projections", test_env, f"{len(seeds)}seeds", f"sapca_{name}.png"))
+    #evaluator._plot_states(pca_states, path=os.path.join("results", "img", "projections", test_env, f"{len(seeds)}seeds", f"spca_{name}.png"))
+    #evaluator._plot_states(pca_state_actions, path=os.path.join("results", "img", "projections", test_env, f"{len(seeds)}seeds", f"sapca_{name}.png"))
 
     rewards.append(np.mean(evaluator.get_rewards()))
     entropy = np.mean(evaluator.get_bc_entropy())

@@ -3,6 +3,7 @@ import torch
 import pickle
 import warnings
 import numpy as np
+import copy
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.decomposition import PCA
@@ -161,10 +162,13 @@ hll_states, hll_state_actions = [], []
 # load training data
 with open(os.path.join("data", "ex_corr", test_env, f"{len(seeds)}_seeds", "er_buffer" + ".pkl"), "rb") as f:
     buffer = pickle.load(f)
-limits = []
+state_limits = []
 for axis in range(len(buffer.state[0])):
-    limits.append(np.min(buffer.state[:,axis]))
-    limits.append(np.max(buffer.state[:, axis]))
+    state_limits.append(np.min(buffer.state[:,axis]))
+    state_limits.append(np.max(buffer.state[:,axis]))
+action_limits = copy.deepcopy(state_limits)
+action_limits.append(np.min(buffer.action))
+action_limits.append(np.max(buffer.action))
 
 for n, name in enumerate(names):
     with open(os.path.join("data", "ex_corr", test_env, f"{len(seeds)}_seeds", name + ".pkl"), "rb") as f:
@@ -174,7 +178,7 @@ for n, name in enumerate(names):
 
     evaluator.train_behavior_policy(epochs=embedding_epochs)
 
-    rewards.append(np.mean(evaluator.get_rewards()))
+    rewards.append(np.mean(evaluator.get_returns()))
     entropy = np.mean(evaluator.get_bc_entropy())
     entropies.append(entropy)
 
@@ -184,8 +188,8 @@ for n, name in enumerate(names):
         unique_states.append(evaluator.get_unique_states_exact())
         unique_state_actions.append(evaluator.get_unique_state_actions_exact())
     else:
-        hll_states.append(evaluator.get_unique_states(limits=limits))
-        hll_state_actions.append(evaluator.get_unique_state_actions(limits=limits))
+        hll_states.append(evaluator.get_unique_states(limits=state_limits))
+        hll_state_actions.append(evaluator.get_unique_state_actions(limits=action_limits))
         unique_states.append(hll_states[-1])
         unique_state_actions.append(hll_state_actions[-1])
 
@@ -196,27 +200,29 @@ for n, name in enumerate(names):
 #########################
 #       Plotting        #
 #########################
-os.makedirs(os.path.join("results", "img", "correlation", test_env), exist_ok=True)
+os.makedirs(os.path.join("results", "correlation", test_env), exist_ok=True)
 
 ### Entropy
 
-plt.figure(figsize=(4.5,4))
-plt.plot(probas, entropies[1:], "-o", color="C0", label="BC")
+plt.figure(figsize=(4, 3))
+plt.hlines(y=entropies[0], xmin=0, xmax=1, color="C1", label="ER buffer")
+plt.plot(probas, entropies[1:], "-o", color="C0", label="$\epsilon$-greedy")
 plt.plot(np.arange(0., 1., 0.01), np.arange(0., 1., 0.01), linestyle="dotted", color="black")
 plt.xlabel("$\epsilon$")
 plt.ylabel("Entropy")
 plt.legend(loc="lower right", fontsize="x-small")
-plt.title("1 seed" if len(seeds) == 1 else "no seeds" if len(seeds) == 0 else f"{len(seeds)} seeds")
+plt.title("-".join(test_env.split("-")[:-1]))
 plt.tight_layout()
-plt.savefig(os.path.join("results", "img", "correlation", test_env, f"entropy_{len(seeds)}_seeds.pdf"))
+plt.savefig(os.path.join("results", "correlation", test_env, f"entropy_{len(seeds)}_seeds.pdf"))
 plt.close()
 
 ### State / State-Action approximation
 
 if test_env == "MiniGrid-LavaGapS7-v0":
 
-    f, axs = plt.subplots(2, 1, figsize=(4, 7))
+    f, axs = plt.subplots(1, 1, figsize=(4, 3))
 
+    """
     xmin = max(np.min(unique_states), np.min(hll_states))
     xmax = min(np.max(unique_states), np.max(hll_states))
     ymin = xmin
@@ -229,47 +235,49 @@ if test_env == "MiniGrid-LavaGapS7-v0":
     axs[0].legend(loc="lower right", fontsize="x-small")
     axs[0].ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
     axs[0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
+    """
     xmin = max(np.min(unique_state_actions), np.min(hll_state_actions))
     xmax = min(np.max(unique_state_actions), np.max(hll_state_actions))
     ymin = xmin
     ymax = xmax
-    axs[1].plot(unique_state_actions[1:], hll_state_actions[1:], "-o", color="C1", label="HLL")
-    axs[1].plot(np.arange(xmin, xmax, (xmax - xmin) / 100)[:100], np.arange(ymin, ymax, (ymax - ymin) / 100)[:100],
+    axs.plot(unique_state_actions[1:], hll_state_actions[1:], "-o", color="C1", label="$\epsilon$-greedy")
+    axs.plot(np.arange(xmin, xmax, (xmax - xmin) / 100)[:100], np.arange(ymin, ymax, (ymax - ymin) / 100)[:100],
                 linestyle="dotted", color="black")
-    axs[1].set_xlabel("Unique State-Actions (exact)")
-    axs[1].set_ylabel("Unique State-Actions estimate")
-    axs[1].legend(loc="lower right", fontsize="x-small")
-    axs[1].ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
-    axs[1].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    axs.set_xlabel("Unique State-Actions (exact)")
+    axs.set_ylabel("Unique State-Actions estimate")
+    axs.legend(loc="lower right", fontsize="x-small")
+    #axs[1].ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+    axs.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
-    plt.suptitle("1 seed" if len(seeds) == 1 else "no seeds" if len(seeds) == 0 else f"{len(seeds)} seeds")
+    plt.title("1 seed" if len(seeds) == 1 else "no seeds" if len(seeds) == 0 else f"{len(seeds)} seeds")
     f.tight_layout()
-    plt.savefig(os.path.join("results", "img", "correlation", test_env, f"approx_quality_{len(seeds)}_seeds.pdf"))
+    plt.savefig(os.path.join("results", "correlation", test_env, f"approx_quality_{len(seeds)}_seeds.pdf"))
     plt.close()
 
 ### epsilon dependence on State and State-Action
 
-f, axs = plt.subplots(2, 1, figsize=(4, 7))
+f, axs = plt.subplots(1, 1, figsize=(4, 3))
 
+"""
 axs[0].plot(probas, hll_states[1:], "-o", color="C2", label="HLL")
 axs[0].axhline(y=hll_states[0], color="C3", label="er_buffer")
 axs[0].set_xlabel("$\epsilon$")
 axs[0].set_ylabel("Unique States estimate")
 axs[0].legend(loc="lower right", fontsize="x-small")
 axs[0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+"""
 
-axs[1].plot(probas, hll_state_actions[1:], "-o", color="C2", label="HLL")
-axs[1].axhline(y=hll_state_actions[0], color="C3", label="er_buffer")
-axs[1].set_xlabel("$\epsilon$")
-axs[1].set_ylabel("Unique State-Actions estimate")
-axs[1].legend(loc="lower right", fontsize="x-small")
-axs[1].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+axs.plot(probas, hll_state_actions[1:], "-o", color="C2", label="$\epsilon$-greedy")
+axs.axhline(y=hll_state_actions[0], color="C1", label="ER buffer")
+axs.set_xlabel("$\epsilon$")
+axs.set_ylabel("Unique state-action pairs")
+axs.legend(loc="upper left", fontsize="x-small")
+axs.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
 plt.autoscale()
-plt.suptitle("1 seed" if len(seeds) == 1 else "no seeds" if len(seeds) == 0 else f"{len(seeds)} seeds")
+plt.title("-".join(test_env.split("-")[:-1]))
 f.tight_layout()
-plt.savefig(os.path.join("results", "img", "correlation", test_env, f"state_eps_dep_{len(seeds)}_seeds.pdf"))
+plt.savefig(os.path.join("results", "correlation", test_env, f"state_eps_dep_{len(seeds)}_seeds.pdf"))
 plt.close()
 
 ### Projections
@@ -280,7 +288,7 @@ if test_env == "MiniGrid-LavaGapS7-v0":
 else:
     random_encoder = np.eye(2)
 
-fig, axs = plt.subplots(3, 3, figsize=(13, 12), sharex=True, sharey=True)
+fig, axs = plt.subplots(3, 3, figsize=(11, 8), sharex=True, sharey=True)
 axs = [item for sublist in zip(axs[:, 0], axs[:, 1], axs[:, 2]) for item in sublist]
 
 for n, name in enumerate(names):
@@ -293,18 +301,18 @@ for n, name in enumerate(names):
     axs[n].scatter(buffer.state[:-1, 0], buffer.state[:-1, 1], c=[f"C{int(a)}" for a in buffer.action[:-1, 0]], s = s)
 
     if n == 0:
-        axs[n].set_title(name)
+        axs[n].set_title("ER buffer")
     else:
         axs[n].set_title(f"$\epsilon$ = {float(name.split('_')[1]) / 100}")
 
 if test_env == "MiniGrid-LavaGapS7-v0":
-    fig.text(0.54, 0.01, 'dim1', ha='center', fontsize=16)
-    fig.text(0.01, 0.5, 'dim2', va='center', rotation='vertical', fontsize=16)
+    fig.text(0.54, 0.01, 'dim1', ha='center', fontsize=14)
+    fig.text(0.01, 0.5, 'dim2', va='center', rotation='vertical', fontsize=14)
 else:
-    fig.text(0.54, 0.01, 'position', ha='center', fontsize=16)
-    fig.text(0.01, 0.5, 'velocity', va='center', rotation='vertical', fontsize=16)
+    fig.text(0.54, 0.01, 'position (m)', ha='center', fontsize=14)
+    fig.text(0.01, 0.5, 'velocity (m/s)', va='center', rotation='vertical', fontsize=14)
 
-fig.text(0.50, 0.98, "1 seed" if len(seeds) == 1 else "no seeds" if len(seeds) == 0 else f"{len(seeds)} seeds", fontsize=16)
+fig.text(0.52, 0.97, "-".join(test_env.split("-")[:-1]), fontsize=16, ha="center")
 fig.tight_layout(rect=(0.02, 0.02, 1, 0.98))
-plt.savefig(os.path.join("results", "img", "correlation", test_env, f"projections_{len(seeds)}_seeds.png"))
+plt.savefig(os.path.join("results", "correlation", test_env, f"projections_{len(seeds)}_seeds.png"))
 plt.close()
