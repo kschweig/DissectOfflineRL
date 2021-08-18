@@ -18,7 +18,7 @@ from source.offline_ds_evaluation.evaluator import Evaluator
 from source.utils.utils import get_agent, make_env
 from gym_minigrid.wrappers import ReseedWrapper
 
-test_env = "MountainCar-v0"#"MiniGrid-LavaGapS7-v0"#
+test_env = "MiniGrid-LavaGapS7-v0"#"MountainCar-v0"#
 
 # keep training parameters for online training fixed, the experiment does not interfere here.
 seed = 42
@@ -297,7 +297,7 @@ for n, name in enumerate(names):
 
     buffer.state = buffer.state @ random_encoder
 
-    s = None if test_env == "MiniGrid-LavaGapS7-v0" else 0.5
+    s = 6 if test_env == "MiniGrid-LavaGapS7-v0" else 0.5
     axs[n].scatter(buffer.state[:-1, 0], buffer.state[:-1, 1], c=[f"C{int(a)}" for a in buffer.action[:-1, 0]], s = s)
 
     if n == 0:
