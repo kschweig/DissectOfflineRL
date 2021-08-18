@@ -27,4 +27,4 @@ dependencies:
       - pygame
       - git+https://github.com/ntasfi/PyGame-Learning-Environment.git
       - git+https://github.com/kenjyoung/MinAtar.git
-      - git+https://github.com/qlan3/gym-games.git
+      - git+https://github.com/kschweig/gym-games.git
